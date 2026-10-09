@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drop to Ocean</title>
+<meta name="description" content="Start as a single drop of water and grow into an entire ocean. An idle clicker game.">
+<meta name="theme-color" content="#062a52">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-top: #0e2238; --bg-bot: #16324d; --water: #7fd6ff;
+    --panel: rgba(6, 18, 34, .74); --panel2: rgba(255, 255, 255, .06); --line: rgba(255, 255, 255, .12);
+    --fg: #eaf6ff; --muted: #9fb8cf; --accent: #5ee0ff; --gold: #ffd25e; --good: #7dffa8; --bad: #ff8d8d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bot)); color: var(--fg);
+    font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+  #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--panel);
+    border-bottom: 1px solid var(--line); }
+  .logo { font-weight: 700; font-size: 20px; white-space: nowrap; cursor: default; }
+  #ticker { flex: 1; min-width: 0; color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; transition: opacity .5s; }
+  .iconbtn { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; width: 36px; height: 36px;
+    font-size: 17px; flex: none; }
+
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 520px); }
+  #left { position: relative; display: flex; flex-direction: column; align-items: center; padding: 18px 16px 16px;
+    min-height: 0; overflow: hidden; }
+  #stageName { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  #stageTag { font-size: 13px; color: var(--muted); margin-top: 2px; text-align: center; }
+  #dropsCount { font-size: clamp(32px, 6vw, 54px); font-weight: 700; line-height: 1.1; margin-top: 6px;
+    text-shadow: 0 2px 12px rgba(0,0,0,.35); font-variant-numeric: tabular-nums; }
+  .sub { color: var(--muted); font-size: 15px; }
+  .sub b { color: var(--fg); font-weight: 600; }
+
+  #pond { position: relative; flex: 1; width: 100%; max-width: 560px; min-height: 200px; margin: 10px 0 12px;
+    border-radius: 28px; overflow: hidden; background: rgba(0,0,0,.18); border: 1px solid var(--line); }
+  #water { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #bigDrop { position: absolute; left: 50%; top: 50%; width: min(46%, 220px); aspect-ratio: 3 / 4; transform: translate(-50%, -50%);
+    background: none; border: 0; padding: 0; touch-action: manipulation; transition: transform .08s; outline: none;
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,.35)); }
+  #bigDrop svg { width: 100%; height: 100%; display: block; animation: bob 3.2s ease-in-out infinite; }
+  #bigDrop:focus-visible { outline: 3px dashed var(--accent); outline-offset: 6px; border-radius: 30%; }
+  #bigDrop.pop { transform: translate(-50%, -50%) scale(.92); }
+  @keyframes bob { 0%, 100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
+  #buffs { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+  .buff { background: rgba(255, 210, 94, .9); color: #2a1d00; font-weight: 600; font-size: 13px; padding: 4px 10px; border-radius: 999px; }
+
+  #stageBar { position: relative; width: 100%; max-width: 560px; height: 26px; border-radius: 999px; background: var(--panel);
+    border: 1px solid var(--line); overflow: hidden; flex: none; }
+  #stageFill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, var(--accent), var(--water));
+    transition: width .3s; opacity: .85; }
+  #stageLabel { position: relative; display: block; text-align: center; font-size: 13px; line-height: 26px; font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+
+  #right { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
+  nav.tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); overflow-x: auto; flex: none; scrollbar-width: none; }
+  nav.tabs::-webkit-scrollbar { display: none; }
+  .tab { position: relative; background: none; border: 0; padding: 8px 10px; border-radius: 10px; font-size: 14px; font-weight: 500;
+    color: var(--muted); white-space: nowrap; }
+  .tab[aria-selected="true"] { background: var(--panel2); color: var(--fg); }
+  .tab .badge { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: var(--gold); color: #2a1d00; font-size: 10px; line-height: 16px; font-weight: 700; }
+  .tab .badge:empty { display: none; }
+  .panel { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; display: none; }
+  .panel.on { display: block; }
+  .panel h3 { margin: 6px 4px 10px; font-size: 16px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0 4px 10px; }
+
+  .seg { display: flex; gap: 4px; margin: 0 0 10px; }
+  .seg button { flex: 1; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 0; font-size: 13px; }
+  .seg button.on { background: var(--accent); color: #032033; border-color: transparent; font-weight: 600; }
+
+  .item { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; background: var(--panel2);
+    border: 1px solid var(--line); margin-bottom: 8px; }
+  .item .ic { font-size: 30px; width: 42px; text-align: center; flex: none; }
+  .item .info { flex: 1; min-width: 0; }
+  .item .nm { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 15px; }
+  .item .own { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .item .ds { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+  .item .pr { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .item .pr b { color: var(--fg); font-weight: 500; }
+  .item.locked { opacity: .55; }
+  .item.locked .ic { filter: grayscale(1) brightness(.4); }
+  .buy { flex: none; min-width: 92px; background: var(--accent); color: #032033; border: 0; border-radius: 10px; padding: 7px 10px;
+    font-size: 12px; line-height: 1.25; display: flex; flex-direction: column; align-items: center; }
+  .buy b { font-size: 14px; }
+  .buy:disabled { background: rgba(255,255,255,.12); color: var(--muted); cursor: not-allowed; }
+  .buy.gold { background: var(--gold); color: #2a1d00; }
+
+  .achgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .ach { padding: 10px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .ach b { display: block; color: var(--fg); font-size: 13px; margin-bottom: 2px; }
+  .ach.got { border-color: rgba(255, 210, 94, .6); background: rgba(255, 210, 94, .1); }
+  .ach:not(.got) b::before { content: '🔒 '; }
+  .ach.got b::before { content: '🏆 '; }
+
+  .stats { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .stats td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
+  .stats td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .bigbtn { width: 100%; padding: 12px; border-radius: 12px; border: 0; font-size: 15px; font-weight: 600; margin: 4px 0 8px;
+    background: var(--accent); color: #032033; }
+  .bigbtn.ghost { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); }
+  .bigbtn.danger { background: #b83a4b; color: #fff; }
+  .bigbtn:disabled { background: rgba(255,255,255,.12); color: var(--muted); cursor: not-allowed; }
+  .cloudbox { text-align: center; padding: 14px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); margin-bottom: 12px; }
+  .cloudbox .big { font-size: 30px; font-weight: 700; }
+  textarea { width: 100%; height: 90px; background: rgba(0,0,0,.3); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px; font-family: ui-monospace, monospace; font-size: 11px; resize: vertical; user-select: text; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+
+  .float { position: fixed; pointer-events: none; font-weight: 700; font-size: 20px; color: #fff; z-index: 30;
+    text-shadow: 0 2px 6px rgba(0,30,60,.7); animation: floatUp 1s ease-out forwards; }
+  @keyframes floatUp { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, -70px); opacity: 0; } }
+  .splash { position: fixed; width: 8px; height: 8px; border-radius: 50%; background: var(--water); pointer-events: none; z-index: 29;
+    animation: splash .6s ease-out forwards; }
+  @keyframes splash { to { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
+
+  #golden { position: fixed; z-index: 40; width: 64px; height: 80px; border: 0; background: none; padding: 0; display: none;
+    filter: drop-shadow(0 0 14px rgba(255, 210, 94, .9)); animation: goldFloat 2.4s ease-in-out infinite, goldIn .4s ease-out; }
+  #golden svg { width: 100%; height: 100%; }
+  @keyframes goldFloat { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-12px) rotate(6deg); } }
+  @keyframes goldIn { from { opacity: 0; } }
+
+  #toasts { position: fixed; bottom: 16px; left: 16px; z-index: 50; display: flex; flex-direction: column; gap: 8px; max-width: min(360px, calc(100vw - 32px)); }
+  .toast { background: rgba(4, 14, 28, .95); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 10px 14px;
+    border-radius: 12px; font-size: 14px; animation: toastIn .3s ease-out; }
+  .toast.gold { border-left-color: var(--gold); }
+  .toast small { display: block; color: var(--muted); }
+  @keyframes toastIn { from { transform: translateY(10px); opacity: 0; } }
+
+  #modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: rgba(0, 8, 18, .7); backdrop-filter: blur(3px); }
+  #modal[hidden] { display: none; }
+  .card { width: min(440px, 100%); background: #0a1e36; border: 1px solid var(--line); border-radius: 20px; padding: 22px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5); animation: toastIn .25s ease-out; max-height: 90vh; overflow-y: auto; }
+  .card h2 { margin: 0 0 8px; font-size: 24px; }
+  .card .body { color: var(--muted); font-size: 15px; line-height: 1.45; }
+  .card .body b { color: var(--fg); }
+  .card .actions { display: flex; gap: 8px; margin-top: 18px; }
+  .card .actions button { flex: 1; }
+
+  @media (max-width: 820px) {
+    main { display: flex; flex-direction: column; }
+    #left { flex: none; height: 46vh; height: 46dvh; padding: 10px 16px; }
+    #pond { min-height: 0; margin: 6px 0 8px; }
+    #stageTag { display: none; }
+    #right { flex: 1; border-left: 0; border-top: 1px solid var(--line); }
+    .logo { font-size: 17px; }
+    #ticker { display: none; }
+    header .spacer { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo" id="logo">💧 Drop to Ocean</div>
+    <div id="ticker"></div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="muteBtn" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+  </header>
+  <main>
+    <section id="left">
+      <div id="stageName">Droplet</div>
+      <div id="stageTag"></div>
+      <div id="dropsCount">0</div>
+      <div class="sub">drops · <b id="dpsText">0</b> per second</div>
+      <div id="pond">
+        <canvas id="water"></canvas>
+        <button id="bigDrop" aria-label="Collect drops">
+          <svg viewBox="0 0 120 160" aria-hidden="true">
+            <defs>
+              <radialGradient id="dg" cx="38%" cy="58%" r="70%">
+                <stop offset="0" stop-color="#e9fbff"/><stop offset=".45" stop-color="#7fd6ff"/><stop offset="1" stop-color="#1b74c9"/>
+              </radialGradient>
+            </defs>
+            <path d="M60 4 C60 4 112 70 112 104 A52 52 0 0 1 8 104 C8 70 60 4 60 4 Z" fill="url(#dg)" stroke="rgba(255,255,255,.7)" stroke-width="3"/>
+            <ellipse cx="40" cy="96" rx="10" ry="18" fill="rgba(255,255,255,.55)" transform="rotate(20 40 96)"/>
+            <circle cx="46" cy="124" r="5" fill="rgba(255,255,255,.4)"/>
+          </svg>
+        </button>
+        <div id="buffs"></div>
+      </div>
+      <div id="stageBar"><div id="stageFill"></div><span id="stageLabel"></span></div>
+    </section>
+
+    <section id="right">
+      <nav class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="gens" aria-selected="true">Generators</button>
+        <button class="tab" role="tab" data-tab="ups">Upgrades <span class="badge" id="upBadge"></span></button>
+        <button class="tab" role="tab" data-tab="prestige">Evaporate <span class="badge" id="preBadge"></span></button>
+        <button class="tab" role="tab" data-tab="ach">Achievements <span class="badge" id="achBadge"></span></button>
+        <button class="tab" role="tab" data-tab="stats">Stats</button>
+        <button class="tab" role="tab" data-tab="settings">Settings</button>
+      </nav>
+      <div class="panel on" id="tab-gens">
+        <div class="seg" id="buyAmt">
+          <button data-n="1">x1</button><button data-n="10">x10</button><button data-n="100">x100</button><button data-n="-1">Max</button>
+        </div>
+        <div id="genList"></div>
+      </div>
+      <div class="panel" id="tab-ups">
+        <p class="hint">One-time upgrades. More appear as your water grows.</p>
+        <div id="upList"></div>
+      </div>
+      <div class="panel" id="tab-prestige">
+        <div class="cloudbox">
+          <div class="hint" style="margin:0">Clouds</div>
+          <div class="big">☁️ <span id="cloudsHave">0</span></div>
+          <div class="hint" style="margin:4px 0 0">Every cloud you have ever earned gives <b>+2%</b> production, forever.</div>
+        </div>
+        <p class="hint">Evaporate to restart from a single drop. You keep Clouds, Cloud upgrades and achievements. Clouds are earned
+          based on all the water you have collected across every run.</p>
+        <button class="bigbtn" id="evapBtn">Evaporate</button>
+        <h3>Cloud Upgrades</h3>
+        <div id="cloudList"></div>
+      </div>
+      <div class="panel" id="tab-ach">
+        <p class="hint">Each achievement permanently boosts all production by <b>+1%</b>.</p>
+        <div class="achgrid" id="achGrid"></div>
+      </div>
+      <div class="panel" id="tab-stats">
+        <table class="stats" id="statsTable"></table>
+      </div>
+      <div class="panel" id="tab-settings">
+        <h3>Game</h3>
+        <button class="bigbtn ghost" id="soundBtn"></button>
+        <button class="bigbtn ghost" id="partBtn"></button>
+        <button class="bigbtn ghost" id="saveBtn">Save now</button>
+        <h3>Backup</h3>
+        <p class="hint">Copy your save to keep it safe, or paste a save to load it.</p>
+        <textarea id="saveText" spellcheck="false" placeholder="Your save code appears here"></textarea>
+        <div class="row">
+          <button class="bigbtn ghost" id="exportBtn">Export</button>
+          <button class="bigbtn ghost" id="importBtn">Import</button>
+        </div>
+        <h3>Danger zone</h3>
+        <button class="bigbtn danger" id="resetBtn">Wipe all progress</button>
+        <p class="hint" style="margin-top:16px;text-align:center">Drop to Ocean · v1.0.0</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<button id="golden" aria-label="Golden drop">
+  <svg viewBox="0 0 120 160" aria-hidden="true">
+    <defs><radialGradient id="gg" cx="38%" cy="58%" r="70%"><stop offset="0" stop-color="#fffbe6"/><stop offset=".5" stop-color="#ffd25e"/><stop offset="1" stop-color="#c78a00"/></radialGradient></defs>
+    <path d="M60 4 C60 4 112 70 112 104 A52 52 0 0 1 8 104 C8 70 60 4 60 4 Z" fill="url(#gg)" stroke="#fff6cc" stroke-width="4"/>
+    <ellipse cx="40" cy="96" rx="10" ry="18" fill="rgba(255,255,255,.6)" transform="rotate(20 40 96)"/>
+  </svg>
+</button>
+<div id="toasts" aria-live="polite"></div>
+<div id="modal" hidden><div class="card" role="dialog" aria-modal="true"><h2 id="mTitle"></h2><div class="body" id="mBody"></div><div class="actions" id="mActions"></div></div></div>
+
+<script>
+'use strict';
+(() => {
+// =====================================================================
+//  DATA
+// =====================================================================
+const SAVE_KEY = 'dropToOcean_save_v1';
+const OFFLINE_CAP = 8 * 3600;
+
+const STAGES = [
+  { name: 'Droplet',     need: 0,    top: '#0e2238', bot: '#16324d', water: '#7fd6ff', tag: 'A single, lonely drop of water.' },
+  { name: 'Puddle',      need: 500,  top: '#1b2230', bot: '#323e4e', water: '#6fb7d9', tag: 'Splashable. Barely.' },
+  { name: 'Pond',        need: 5e4,  top: '#0d281e', bot: '#1d4a33', water: '#3fae92', tag: 'Home to one very confused frog.' },
+  { name: 'Lake',        need: 5e6,  top: '#0b2236', bot: '#1c4f6e', water: '#3b95d6', tag: 'People are building cabins around you.' },
+  { name: 'River',       need: 5e8,  top: '#0e261c', bot: '#295a3b', water: '#4ab6cc', tag: 'You have places to be.' },
+  { name: 'Sea',         need: 5e10, top: '#061f38', bot: '#0d3f66', water: '#2585cc', tag: 'Ships now need maps of you.' },
+  { name: 'Ocean',       need: 5e12, top: '#020f22', bot: '#062a52', water: '#1667c2', tag: 'Vast. Deep. Unstoppable.' },
+  { name: 'Blue Planet', need: 5e14, top: '#01010a', bot: '#0a1236', water: '#2b7bff', tag: 'The whole world is you now.' },
+];
+const OCEAN = 6;
+
+const TICKER = [
+  ['A leaf tilts. You almost fall off.', 'A passing ant considers you a lake.', 'Scientists confirm: you are, in fact, wet.'],
+  ['A child jumps in you. Rude.', 'A pigeon takes a sip. You feel used.', 'Local news: "Puddle refuses to evaporate."'],
+  ['The frog has invited friends.', 'Lily pads report record growth.', 'A duck has filed for residency.'],
+  ['Fishermen argue about the one that got away.', 'A lake monster rumor begins. It is just a log.', 'Real estate prices on your shore are soaring.'],
+  ['You carve a canyon. Slowly.', 'Salmon are swimming upstream, which is the wrong way.', 'A kayaker screams with joy.'],
+  ['Pirates have entered the chat.', 'A lighthouse now watches you at night.', 'You have tides now. Fancy.'],
+  ['Whales sing songs about you.', 'Somewhere deep below, something glows.', 'You cover most of the map now.'],
+  ['Astronauts take your picture.', 'Aliens call you "the wet one".', 'Every drop that ever was, is you.'],
+];
+
+const GENS = [
+  { id: 'dew',       name: 'Dew Collector',    icon: '🌿', base: 15,     rate: 0.15, stage: 0, desc: 'Gathers morning dew from leaves.' },
+  { id: 'rain',      name: 'Little Raincloud', icon: '🌦️', base: 100,    rate: 1.25, stage: 0, desc: 'A tiny cloud that follows you around.' },
+  { id: 'spring',    name: 'Spring',           icon: '⛲', base: 1100,   rate: 12, stage: 1, desc: 'Fresh water bubbling up from the ground.' },
+  { id: 'stream',    name: 'Mountain Stream',  icon: '🏞️', base: 12000,  rate: 110, stage: 1, desc: 'Snowmelt rushing down to meet you.' },
+  { id: 'glacier',   name: 'Melting Glacier',  icon: '🧊', base: 1.3e5,  rate: 930, stage: 2, desc: 'Ancient ice, finally letting go.' },
+  { id: 'monsoon',   name: 'Monsoon',          icon: '⛈️', base: 1.4e6,  rate: 7800, stage: 2, desc: 'A whole season of rain, on demand.' },
+  { id: 'waterfall', name: 'Waterfall',        icon: '🌈', base: 2e7,    rate: 9e4, stage: 3, desc: 'Gravity is doing most of the work.' },
+  { id: 'tide',      name: 'Tidal Engine',     icon: '⚙️', base: 3.3e8,  rate: 1.3e6, stage: 3, desc: 'Turns the motion of tides into more water.' },
+  { id: 'hurricane', name: 'Hurricane',        icon: '🌀', base: 5.1e9,  rate: 1.7e7, stage: 4, desc: 'Inhales the sky, exhales rain.' },
+  { id: 'moon',      name: 'Moon Pull',        icon: '🌕', base: 7.5e10, rate: 2.2e8, stage: 5, desc: 'The moon lends you a hand.' },
+  { id: 'abyss',     name: 'Abyssal Vent',     icon: '🌋', base: 1e12,   rate: 2.6e9, stage: 5, desc: 'Water from the deepest cracks of the earth.' },
+  { id: 'comet',     name: 'Ice Comet',        icon: '☄️', base: 1.4e13, rate: 3.3e10, stage: 6, desc: 'Delivering water from deep space.' },
+];
+
+const TIER_OWN = [10, 25, 50, 100, 150];
+const TIER_COST = [10, 100, 2000, 1e6, 1e9];
+const TIER_NAME = ['Polished', 'Reinforced', 'Enchanted', 'Abyssal', 'Primordial'];
+
+const UPS = [];
+[
+  ['hands',    'Cupped Hands',    '🤲', 100,  { clickMul: 2 }, 'Clicking is twice as effective.'],
+  ['leaf',     'Leaf Ladle',      '🍃', 600,  { clickMul: 2 }, 'Clicking is twice as effective.'],
+  ['bucket',   'Copper Bucket',   '🪣', 8000, { clickMul: 2 }, 'Clicking is twice as effective.'],
+  ['barrel',   'Rain Barrel',     '🛢️', 1e5,  { clickPct: .01 }, 'Clicks also gain 1% of your drops per second.'],
+  ['tower',    'Water Tower',     '🗼', 5e6,  { clickMul: 3 }, 'Clicking is three times as effective.'],
+  ['aqueduct', 'Aqueduct',        '🏛️', 5e8,  { clickPct: .02 }, 'Clicks also gain 2% of your drops per second.'],
+  ['dam',      'Great Dam',       '🧱', 5e10, { clickMul: 3 }, 'Clicking is three times as effective.'],
+  ['tsunami',  'Tsunami Touch',   '🌊', 5e12, { clickPct: .03 }, 'Clicks also gain 3% of your drops per second.'],
+  ['season',   'Rainy Season',    '🌧️', 2e4,  { global: 1.1 }, 'All production +10%.'],
+  ['tables',   'Tide Tables',     '📜', 2e7,  { global: 1.15 }, 'All production +15%.'],
+  ['hydro',    'Hydrosphere',     '🌐', 2e10, { global: 1.2 }, 'All production +20%.'],
+  ['planet',   'Planetary Water', '🪐', 2e13, { global: 1.25 }, 'All production +25%.'],
+  ['ripples',  'Lucky Ripples',   '✨', 2.5e5,{ goldDur: 1.5 }, 'Golden drop effects last 50% longer.'],
+].forEach(([id, name, icon, cost, fx, desc]) => UPS.push({ id, name, icon, cost, fx, desc, req: () => true }));
+GENS.forEach(g => TIER_OWN.forEach((own, t) => UPS.push({
+  id: g.id + '_t' + t, name: TIER_NAME[t] + ' ' + g.name, icon: g.icon, cost: g.base * TIER_COST[t],
+  fx: { tier: g.id }, desc: g.name + ' production is doubled. (Needs ' + own + ' owned)', req: () => (S.gens[g.id] || 0) >= own,
+})));
+
+const CLOUD_UPS = [
+  { id: 'morning',   name: 'Morning Dew',       icon: '🌅', cost: 1,   desc: 'Start every run with 10 Dew Collectors and 5 Little Rainclouds.' },
+  { id: 'silver',    name: 'Silver Lining',     icon: '🥈', cost: 3,   desc: 'Golden drops appear twice as often.' },
+  { id: 'moisture',  name: 'Retained Moisture', icon: '💤', cost: 5,   desc: 'Offline progress raised from 50% to 100%.' },
+  { id: 'storm',     name: 'Storm Memory',      icon: '⚡', cost: 10,  desc: 'Clicks are 3x stronger.' },
+  { id: 'rainmaker', name: 'Rainmaker',         icon: '🪄', cost: 25,  desc: 'All generators produce 2x.' },
+  { id: 'longtide',  name: 'Long Tide',         icon: '⏳', cost: 50,  desc: 'Golden drop effects last twice as long.' },
+  { id: 'erosion',   name: 'Erosion',           icon: '🪨', cost: 100, desc: 'All generators are 10% cheaper.' },
+  { id: 'endless',   name: 'Endless Rain',      icon: '🌧️', cost: 200, desc: 'Automatically clicks 5 times per second.' },
+];
+
+const ACH = [];
+[[1e2, 'First Splash'], [1e3, 'Thirsty'], [1e4, 'Bucket List'], [1e6, 'Million Drop Club'], [1e8, 'Hydrated'],
+ [1e10, 'Flood Warning'], [1e12, 'Sea Level Rise'], [1e14, 'Tidal Force'], [1e16, 'Infinite Blue']]
+  .forEach(([n, name]) => ACH.push({ id: 'tot' + n, name, desc: 'Collect ' + fmt(n) + ' drops in total.', check: () => S.allTotal >= n }));
+[[100, 'Tapper'], [1000, 'Rain Dancer'], [10000, 'Drumming Fingers'], [50000, 'Hydro Hands']]
+  .forEach(([n, name]) => ACH.push({ id: 'clk' + n, name, desc: 'Click the drop ' + fmt(n) + ' times.', check: () => S.clicks >= n }));
+GENS.forEach(g => [[1, 'First'], [50, 'Hoarder'], [100, 'Magnate']].forEach(([n, w]) => ACH.push({
+  id: 'g_' + g.id + n, name: n === 1 ? g.name : g.name + ' ' + w, desc: 'Own ' + n + ' ' + g.name + (n > 1 ? 's' : '') + '.',
+  check: () => (S.gens[g.id] || 0) >= n,
+})));
+STAGES.forEach((st, i) => { if (i) ACH.push({ id: 'st' + i, name: 'Becoming a ' + st.name, desc: 'Grow into a ' + st.name + '.', check: () => S.bestStage >= i }); });
+[[1, 'Shiny!'], [10, 'Gold Rush'], [50, 'Midas Rain']]
+  .forEach(([n, name]) => ACH.push({ id: 'gold' + n, name, desc: 'Catch ' + n + ' golden drop' + (n > 1 ? 's' : '') + '.', check: () => S.golden >= n }));
+[[1, 'Evaporated'], [5, 'Water Cycle'], [25, 'Eternal Return']]
+  .forEach(([n, name]) => ACH.push({ id: 'pre' + n, name, desc: 'Evaporate ' + n + ' time' + (n > 1 ? 's' : '') + '.', check: () => S.prestiges >= n }));
+ACH.push({ id: 'speed', name: 'Flash Flood', desc: 'Become an Ocean in under 1 hour of a single run.', check: () => S.stage >= OCEAN && S.runTime < 3600 });
+ACH.push({ id: 'logo', name: 'Curious Drop', desc: 'Poke the logo 10 times.', secret: true, check: () => S.logoClicks >= 10 });
+
+// =====================================================================
+//  STATE
+// =====================================================================
+function freshState() {
+  return {
+    v: 1, drops: 0, runTotal: 0, allTotal: 0, prevRuns: 0, clickTotal: 0, clicks: 0,
+    gens: {}, ups: {}, ach: {}, cloudsTotal: 0, cloudsSpent: 0, cloudUps: {},
+    golden: 0, prestiges: 0, stage: 0, bestStage: 0, won: false, buffs: [],
+    played: 0, runTime: 0, lastSave: Date.now(), created: Date.now(), goldenNext: 60 + Math.random() * 60,
+    logoClicks: 0, settings: { sound: true, particles: true, buy: 1 },
+  };
+}
+let S = freshState();
+let mods = {};
+let curDps = 0;
+
+function recalc() {
+  const m = { clickMul: 1, clickPct: 0, global: 1, tier: {}, goldDur: 1, achCount: 0 };
+  for (const u of UPS) {
+    if (!S.ups[u.id]) continue;
+    const f = u.fx;
+    if (f.clickMul) m.clickMul *= f.clickMul;
+    if (f.clickPct) m.clickPct += f.clickPct;
+    if (f.global) m.global *= f.global;
+    if (f.goldDur) m.goldDur *= f.goldDur;
+    if (f.tier) m.tier[f.tier] = (m.tier[f.tier] || 0) + 1;
+  }
+  if (S.cloudUps.longtide) m.goldDur *= 2;
+  m.achCount = Object.keys(S.ach).length;
+  mods = m;
+}
+
+const hasBuff = t => S.buffs.some(b => b.type === t);
+const costMult = () => S.cloudUps.erosion ? 0.9 : 1;
+const genRate = g => g.rate * Math.pow(2, mods.tier[g.id] || 0);
+function globalMult(withBuffs = true) {
+  let m = mods.global * (1 + 0.02 * S.cloudsTotal) * (1 + 0.01 * mods.achCount) * (1 + 0.25 * S.stage);
+  if (S.cloudUps.rainmaker) m *= 2;
+  if (withBuffs && hasBuff('flood')) m *= 7;
+  return m;
+}
+function dps(withBuffs = true) {
+  let s = 0;
+  for (const g of GENS) s += genRate(g) * (S.gens[g.id] || 0);
+  return s * globalMult(withBuffs);
+}
+function clickValue() {
+  let v = mods.clickMul * (S.cloudUps.storm ? 3 : 1) * (1 + 0.01 * mods.achCount) + curDps * mods.clickPct;
+  if (hasBuff('whirl')) v *= 77;
+  return v;
+}
+function genCost(g, k = 1) {
+  const r = 1.15, c0 = g.base * costMult() * Math.pow(r, S.gens[g.id] || 0);
+  return c0 * (Math.pow(r, k) - 1) / (r - 1);
+}
+function maxAffordable(g) {
+  const c0 = genCost(g, 1);
+  return Math.max(0, Math.floor(Math.log(S.drops * 0.15 / c0 + 1) / Math.log(1.15)));
+}
+function stageFor(total) { let i = 0; while (i + 1 < STAGES.length && total >= STAGES[i + 1].need) i++; return i; }
+const cloudsAvail = () => S.cloudsTotal - S.cloudsSpent;
+const cloudGain = () => Math.max(0, Math.floor(Math.sqrt((S.prevRuns + S.runTotal) / 1e9)) - S.cloudsTotal);
+
+function gain(x) { S.drops += x; S.runTotal += x; S.allTotal += x; }
+
+// =====================================================================
+//  ACTIONS
+// =====================================================================
+function doClick(x, y, auto) {
+  const v = clickValue();
+  gain(v);
+  S.clickTotal += v;
+  if (auto) return;
+  S.clicks++;
+  sfx.plop();
+  bigDrop.classList.add('pop');
+  setTimeout(() => bigDrop.classList.remove('pop'), 80);
+  if (S.settings.particles && x != null) spawnFloat(x, y, '+' + fmt(v));
+}
+
+function buyGen(g) {
+  let k = S.settings.buy;
+  if (k === -1) k = Math.max(1, maxAffordable(g));
+  const c = genCost(g, k);
+  if (S.drops < c) return;
+  S.drops -= c;
+  S.gens[g.id] = (S.gens[g.id] || 0) + k;
+  sfx.buy();
+  dirty = true;
+}
+
+function buyUp(u) {
+  if (S.ups[u.id] || S.drops < u.cost || !u.req()) return;
+  S.drops -= u.cost;
+  S.ups[u.id] = true;
+  sfx.buy();
+  recalc();
+  dirty = true;
+}
+
+function buyCloud(c) {
+  if (S.cloudUps[c.id] || cloudsAvail() < c.cost) return;
+  S.cloudsSpent += c.cost;
+  S.cloudUps[c.id] = true;
+  sfx.stage();
+  recalc();
+  dirty = true;
+}
+
+function startRun() {
+  S.drops = 0; S.runTotal = 0; S.gens = {}; S.ups = {}; S.buffs = []; S.stage = 0; S.runTime = 0;
+  if (S.cloudUps.morning) { S.gens.dew = 10; S.gens.rain = 5; }
+}
+
+function evaporate() {
+  const g = cloudGain();
+  if (g < 1) return;
+  modal('Evaporate?', `You will rise into the sky and fall again as a single drop.<br><br>You gain <b>☁️ ${fmt(g)} Clouds</b> ` +
+    `(+${fmt(g * 2)}% production forever).<br>Drops, generators and upgrades reset.`, [
+    { label: 'Not yet', ghost: true },
+    { label: 'Evaporate', fn: () => {
+      S.prevRuns += S.runTotal;
+      S.cloudsTotal += g;
+      S.prestiges++;
+      startRun();
+      recalc();
+      sfx.stage();
+      toast('☁️ You evaporated!', 'Gained ' + fmt(g) + ' Clouds.', true);
+      dirty = true;
+      save();
+    } },
+  ]);
+}
+
+// =====================================================================
+//  GOLDEN DROPS
+// =====================================================================
+const goldenEl = document.getElementById('golden');
+let goldenLife = 0;
+function spawnGolden() {
+  const pad = 80;
+  goldenEl.style.left = (pad + Math.random() * (innerWidth - pad * 2 - 64)) + 'px';
+  goldenEl.style.top = (pad + Math.random() * (innerHeight - pad * 2 - 80)) + 'px';
+  goldenEl.style.display = 'block';
+  goldenLife = 13;
+  sfx.sparkle();
+}
+function hideGolden() { goldenEl.style.display = 'none'; goldenLife = 0; }
+function nextGoldenDelay() { return (90 + Math.random() * 90) * (S.cloudUps.silver ? 0.5 : 1); }
+goldenEl.addEventListener('click', e => {
+  if (goldenLife <= 0) return;
+  hideGolden();
+  S.golden++;
+  const r = Math.random(), d = mods.goldDur;
+  if (r < 0.45) {
+    const amt = Math.max(13, Math.min(S.drops * 0.15, dps(false) * 900));
+    gain(amt);
+    toast('✨ Lucky Splash!', '+' + fmt(amt) + ' drops', true);
+    spawnFloat(e.clientX, e.clientY, '+' + fmt(amt));
+  } else if (r < 0.8) {
+    addBuff('flood', 30 * d);
+    toast('🌊 FLOOD!', 'Production x7 for ' + Math.round(30 * d) + ' seconds', true);
+  } else {
+    addBuff('whirl', 13 * d);
+    toast('🌀 WHIRLPOOL!', 'Clicks x77 for ' + Math.round(13 * d) + ' seconds', true);
+  }
+  sfx.golden();
+  dirty = true;
+});
+function addBuff(type, t) {
+  const b = S.buffs.find(x => x.type === type);
+  if (b) b.t = Math.max(b.t, t); else S.buffs.push({ type, t, max: t });
+}
+
+// =====================================================================
+//  TICK
+// =====================================================================
+let autoAcc = 0;
+function tick(dt) {
+  S.played += dt; S.runTime += dt;
+  curDps = dps();
+  gain(curDps * dt);
+
+  if (S.cloudUps.endless) {
+    autoAcc += dt * 5;
+    while (autoAcc >= 1) { autoAcc--; doClick(null, null, true); }
+  }
+
+  for (const b of S.buffs) b.t -= dt;
+  if (S.buffs.some(b => b.t <= 0)) { S.buffs = S.buffs.filter(b => b.t > 0); dirty = true; }
+
+  if (goldenLife > 0) { goldenLife -= dt; if (goldenLife <= 0) hideGolden(); }
+  else { S.goldenNext -= dt; if (S.goldenNext <= 0) { S.goldenNext = nextGoldenDelay(); spawnGolden(); } }
+
+  const st = stageFor(S.runTotal);
+  if (st > S.stage) {
+    S.stage = st;
+    const first = st > S.bestStage;
+    S.bestStage = Math.max(S.bestStage, st);
+    applyTheme();
+    sfx.stage();
+    const unlocked = GENS.filter(g => g.stage === st).map(g => g.icon + ' ' + g.name);
+    if (st === OCEAN && !S.won) {
+      S.won = true;
+      modal('🌊 You became the Ocean!', `From a single drop to an entire ocean in <b>${fmtTime(S.played)}</b>.<br><br>` +
+        `But the water cycle never ends. Keep growing into a <b>Blue Planet</b>, or <b>Evaporate</b> to earn Clouds and go even faster.`,
+        [{ label: 'Keep flowing' }]);
+    } else if (first && st > 0) {
+      modal('You are now a ' + STAGES[st].name + '!', STAGES[st].tag + '<br><br>Production bonus: <b>+' + (st * 25) + '%</b>' +
+        (unlocked.length ? '<br>New generators: <b>' + unlocked.join(', ') + '</b>' : ''), [{ label: 'Onward' }]);
+    } else {
+      toast('💧 ' + STAGES[st].name + ' reached', '+' + (st * 25) + '% production');
+    }
+    dirty = true;
+  }
+}
+
+function checkAch() {
+  let n = 0;
+  for (const a of ACH) {
+    if (!S.ach[a.id] && a.check()) {
+      S.ach[a.id] = Date.now(); n++;
+      toast('🏆 ' + a.name, a.desc, true);
+      newAch++;
+    }
+  }
+  if (n) { recalc(); sfx.sparkle(); dirty = true; }
+}
+
+// =====================================================================
+//  SAVE / LOAD
+// =====================================================================
+function save() {
+  S.lastSave = Date.now();
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+}
+function hydrate(obj) {
+  const base = freshState();
+  const s = Object.assign(base, obj);
+  s.settings = Object.assign(freshState().settings, obj.settings || {});
+  for (const k of ['gens', 'ups', 'ach', 'cloudUps']) if (typeof s[k] !== 'object' || !s[k]) s[k] = {};
+  if (!Array.isArray(s.buffs)) s.buffs = [];
+  return s;
+}
+function load() {
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); } catch (e) {}
+  if (!raw) return false;
+  try { S = hydrate(JSON.parse(raw)); return true; } catch (e) { return false; }
+}
+function encodeSave() { return btoa(unescape(encodeURIComponent(JSON.stringify(S)))); }
+function decodeSave(str) { return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
+
+function offlineProgress() {
+  const away = Math.min(OFFLINE_CAP, (Date.now() - S.lastSave) / 1000);
+  if (away < 60) return;
+  S.buffs = [];
+  recalc();
+  const eff = S.cloudUps.moisture ? 1 : 0.5;
+  const amt = dps() * away * eff;
+  if (amt <= 0) return;
+  gain(amt);
+  S.played += away; S.runTime += away;
+  modal('Welcome back!', `While you were away for <b>${fmtTime(away)}</b>, your water kept flowing.<br><br>` +
+    `You collected <b>💧 ${fmt(amt)}</b> drops` + (eff < 1 ? ' (50% offline rate)' : '') + '.', [{ label: 'Nice!' }]);
+}
+
+// =====================================================================
+//  FORMATTING
+// =====================================================================
+function fmt(n) {
+  if (!isFinite(n)) return '∞';
+  if (n < 1000) return n < 100 && n % 1 ? (Math.floor(n * 10) / 10).toString() : Math.floor(n).toString();
+  const SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid', 'Sxd', 'Spd', 'Ocd', 'Nod', 'Vg'];
+  const e = Math.floor(Math.log10(n) / 3);
+  if (e >= SUF.length) return n.toExponential(2).replace('+', '');
+  const v = n / Math.pow(10, e * 3);
+  return (Math.floor(v * 100) / 100).toFixed(v < 10 ? 2 : v < 100 ? 1 : 0) + SUF[e];
+}
+function fmtTime(s) {
+  s = Math.floor(s);
+  const d = Math.floor(s / 86400), h = Math.floor(s / 3600) % 24, m = Math.floor(s / 60) % 60, sec = s % 60;
+  if (d) return d + 'd ' + h + 'h';
+  if (h) return h + 'h ' + m + 'm';
+  if (m) return m + 'm ' + sec + 's';
+  return sec + 's';
+}
+
+// =====================================================================
+//  AUDIO
+// =====================================================================
+let actx = null;
+function ac() {
+  if (!S.settings.sound) return null;
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(freq, freq2, dur, vol = .15, type = 'sine', delay = 0) {
+  const a = ac(); if (!a) return;
+  const t = a.currentTime + delay, o = a.createOscillator(), gn = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq2, t + dur);
+  gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(gn).connect(a.destination); o.start(t); o.stop(t + dur + .02);
+}
+const sfx = {
+  plop() { const f = 520 + Math.random() * 260; tone(f, f * .35, .12, .14); },
+  buy() { tone(660, 990, .09, .08, 'triangle'); },
+  sparkle() { [1320, 1760, 2093].forEach((f, i) => tone(f, f, .12, .05, 'sine', i * .06)); },
+  golden() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, f * 1.01, .18, .08, 'triangle', i * .07)); },
+  stage() { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .3, .09, 'sine', i * .11)); },
+};
+
+// =====================================================================
+//  UI
+// =====================================================================
+const $ = id => document.getElementById(id);
+const bigDrop = $('bigDrop');
+let dirty = true, newAch = 0, curTab = 'gens';
+
+function spawnFloat(x, y, text) {
+  if (document.querySelectorAll('.float').length > 30) return;
+  const f = document.createElement('div');
+  f.className = 'float'; f.textContent = text;
+  f.style.left = (x + (Math.random() - .5) * 30) + 'px'; f.style.top = (y - 20) + 'px';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 1000);
+  for (let i = 0; i < 5; i++) {
+    const s = document.createElement('div');
+    s.className = 'splash';
+    const ang = Math.random() * Math.PI * 2, dist = 30 + Math.random() * 40;
+    s.style.left = x + 'px'; s.style.top = y + 'px';
+    s.style.setProperty('--dx', Math.cos(ang) * dist + 'px'); s.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 600);
+  }
+}
+
+function toast(title, sub, gold) {
+  const box = $('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast' + (gold ? ' gold' : '');
+  t.innerHTML = '<b></b><small></small>';
+  t.querySelector('b').textContent = title;
+  t.querySelector('small').textContent = sub || '';
+  box.appendChild(t);
+  while (box.children.length > 4) box.firstChild.remove();
+  setTimeout(() => t.remove(), 4200);
+}
+
+const modalQueue = [];
+function modal(title, html, buttons) {
+  modalQueue.push({ title, html, buttons });
+  if ($('modal').hidden) showNextModal();
+}
+function showNextModal() {
+  const m = modalQueue.shift();
+  if (!m) { $('modal').hidden = true; return; }
+  $('mTitle').textContent = m.title;
+  $('mBody').innerHTML = m.html;
+  const act = $('mActions');
+  act.innerHTML = '';
+  for (const b of m.buttons) {
+    const el = document.createElement('button');
+    el.className = 'bigbtn' + (b.ghost ? ' ghost' : '') + (b.danger ? ' danger' : '');
+    el.textContent = b.label;
+    el.addEventListener('click', () => { showNextModal(); if (b.fn) b.fn(); });
+    act.appendChild(el);
+  }
+  $('modal').hidden = false;
+  act.lastChild.focus();
+}
+
+function applyTheme() {
+  const st = STAGES[S.stage], r = document.documentElement.style;
+  r.setProperty('--bg-top', st.top); r.setProperty('--bg-bot', st.bot); r.setProperty('--water', st.water);
+  document.querySelector('meta[name=theme-color]').setAttribute('content', st.top);
+  $('stageName').textContent = st.name;
+  $('stageTag').textContent = st.tag;
+  tickerIdx = 0; showTicker();
+}
+
+let tickerIdx = 0;
+function showTicker() {
+  const list = TICKER[S.stage], el = $('ticker');
+  el.style.opacity = 0;
+  setTimeout(() => { el.textContent = list[tickerIdx++ % list.length]; el.style.opacity = 1; }, 400);
+}
+
+// ---------- tabs ----------
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  curTab = t.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'tab-' + curTab));
+  if (curTab === 'ach') newAch = 0;
+  if (curTab === 'settings') $('saveText').value = '';
+  dirty = true;
+}));
+
+// ---------- buy amount ----------
+document.querySelectorAll('#buyAmt button').forEach(b => b.addEventListener('click', () => { S.settings.buy = +b.dataset.n; dirty = true; }));
+
+// ---------- generators ----------
+const genEls = {};
+GENS.forEach(g => {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = '<div class="ic"></div><div class="info"><div class="nm"><span class="n"></span><span class="own"></span></div>' +
+    '<div class="ds"></div><div class="pr"></div></div><button class="buy"><span class="bq"></span><b class="bc"></b></button>';
+  const btn = el.querySelector('.buy');
+  btn.addEventListener('click', () => buyGen(g));
+  $('genList').appendChild(el);
+  genEls[g.id] = { el, ic: el.querySelector('.ic'), n: el.querySelector('.n'), own: el.querySelector('.own'), ds: el.querySelector('.ds'),
+    pr: el.querySelector('.pr'), btn, bq: el.querySelector('.bq'), bc: el.querySelector('.bc') };
+});
+function renderGens() {
+  document.querySelectorAll('#buyAmt button').forEach(b => b.classList.toggle('on', +b.dataset.n === S.settings.buy));
+  let teaserShown = false;
+  const gm = globalMult();
+  for (const g of GENS) {
+    const e = genEls[g.id], unlocked = g.stage <= S.stage || (S.gens[g.id] || 0) > 0;
+    if (!unlocked) {
+      if (teaserShown) { e.el.style.display = 'none'; continue; }
+      teaserShown = true;
+      e.el.style.display = '';
+      e.el.classList.add('locked');
+      e.ic.textContent = g.icon; e.n.textContent = '???'; e.own.textContent = '';
+      e.ds.textContent = 'Grow into a ' + STAGES[g.stage].name + ' to discover this.';
+      e.pr.textContent = ''; e.btn.style.visibility = 'hidden';
+      continue;
+    }
+    e.el.style.display = ''; e.el.classList.remove('locked'); e.btn.style.visibility = '';
+    e.ic.textContent = g.icon; e.n.textContent = g.name; e.ds.textContent = g.desc;
+    const own = S.gens[g.id] || 0, each = genRate(g) * gm;
+    e.own.textContent = own;
+    e.pr.innerHTML = 'Each <b>+' + fmt(each) + '/s</b>' + (own ? ' · Total <b>' + fmt(each * own) + '/s</b>' : '');
+    let k = S.settings.buy;
+    if (k === -1) k = Math.max(1, maxAffordable(g));
+    const c = genCost(g, k);
+    e.bq.textContent = 'Buy x' + k;
+    e.bc.textContent = '💧 ' + fmt(c);
+    e.btn.disabled = S.drops < c;
+  }
+}
+
+// ---------- upgrades ----------
+let upSig = '';
+function visibleUps() {
+  return UPS.filter(u => !S.ups[u.id] && u.req() && S.runTotal >= u.cost * 0.2).sort((a, b) => a.cost - b.cost);
+}
+function renderUps() {
+  const list = visibleUps(), sig = list.map(u => u.id).join();
+  const box = $('upList');
+  if (sig !== upSig) {
+    upSig = sig;
+    box.innerHTML = list.length ? '' : '<p class="hint">No upgrades available right now. Keep collecting!</p>';
+    for (const u of list) {
+      const el = document.createElement('div');
+      el.className = 'item'; el.dataset.id = u.id;
+      el.innerHTML = '<div class="ic"></div><div class="info"><div class="nm"><span></span></div><div class="ds"></div></div>' +
+        '<button class="buy gold"><span>Buy</span><b></b></button>';
+      el.querySelector('.ic').textContent = u.icon;
+      el.querySelector('.nm span').textContent = u.name;
+      el.querySelector('.ds').textContent = u.desc;
+      el.querySelector('.buy b').textContent = '💧 ' + fmt(u.cost);
+      el.querySelector('.buy').addEventListener('click', () => buyUp(u));
+      box.appendChild(el);
+    }
+  }
+  let afford = 0;
+  box.querySelectorAll('.item').forEach(el => {
+    const u = UPS.find(x => x.id === el.dataset.id), ok = S.drops >= u.cost;
+    el.querySelector('.buy').disabled = !ok;
+    if (ok) afford++;
+  });
+  $('upBadge').textContent = afford || '';
+}
+
+// ---------- prestige ----------
+const cloudEls = {};
+CLOUD_UPS.forEach(c => {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = '<div class="ic"></div><div class="info"><div class="nm"><span></span></div><div class="ds"></div></div><button class="buy"><span></span><b></b></button>';
+  el.querySelector('.ic').textContent = c.icon;
+  el.querySelector('.nm span').textContent = c.name;
+  el.querySelector('.ds').textContent = c.desc;
+  const btn = el.querySelector('.buy');
+  btn.addEventListener('click', () => buyCloud(c));
+  $('cloudList').appendChild(el);
+  cloudEls[c.id] = { btn, lbl: btn.querySelector('span'), cost: btn.querySelector('b') };
+});
+$('evapBtn').addEventListener('click', evaporate);
+function renderPrestige() {
+  $('cloudsHave').textContent = fmt(cloudsAvail()) + (S.cloudsSpent ? ' / ' + fmt(S.cloudsTotal) : '');
+  const g = cloudGain(), btn = $('evapBtn');
+  btn.disabled = g < 1;
+  if (g >= 1) btn.textContent = 'Evaporate for ☁️ ' + fmt(g) + ' Clouds';
+  else {
+    const next = Math.pow(S.cloudsTotal + 1, 2) * 1e9 - S.prevRuns;
+    btn.textContent = 'Collect ' + fmt(Math.max(0, next - S.runTotal)) + ' more drops this run';
+  }
+  $('preBadge').textContent = g >= Math.max(1, S.cloudsTotal) ? '!' : '';
+  for (const c of CLOUD_UPS) {
+    const e = cloudEls[c.id], owned = !!S.cloudUps[c.id];
+    e.lbl.textContent = owned ? 'Owned' : 'Buy';
+    e.cost.textContent = owned ? '✓' : '☁️ ' + c.cost;
+    e.btn.disabled = owned || cloudsAvail() < c.cost;
+  }
+}
+
+// ---------- achievements ----------
+const achEls = {};
+ACH.forEach(a => {
+  const el = document.createElement('div');
+  el.className = 'ach';
+  el.innerHTML = '<b></b><span></span>';
+  $('achGrid').appendChild(el);
+  achEls[a.id] = el;
+});
+function renderAch() {
+  for (const a of ACH) {
+    const el = achEls[a.id], got = !!S.ach[a.id];
+    el.classList.toggle('got', got);
+    el.querySelector('b').textContent = a.secret && !got ? '???' : a.name;
+    el.querySelector('span').textContent = a.secret && !got ? 'A secret achievement.' : a.desc;
+  }
+  $('achBadge').textContent = newAch || '';
+}
+
+// ---------- stats ----------
+function renderStats() {
+  const rows = [
+    ['Drops (this run)', fmt(S.runTotal)], ['Drops (all time)', fmt(S.allTotal)], ['Drops per second', fmt(curDps)],
+    ['Drops per click', fmt(clickValue())], ['Drops from clicking', fmt(S.clickTotal)], ['Total clicks', fmt(S.clicks)],
+    ['Golden drops caught', fmt(S.golden)], ['Generators owned', fmt(GENS.reduce((s, g) => s + (S.gens[g.id] || 0), 0))],
+    ['Upgrades bought', Object.keys(S.ups).length + ' / ' + UPS.length], ['Achievements', mods.achCount + ' / ' + ACH.length],
+    ['Production multiplier', 'x' + fmt(globalMult(false))], ['Clouds earned', fmt(S.cloudsTotal)], ['Times evaporated', S.prestiges],
+    ['Biggest form', STAGES[S.bestStage].name], ['This run', fmtTime(S.runTime)], ['Time played', fmtTime(S.played)],
+  ];
+  $('statsTable').innerHTML = rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+}
+
+// ---------- settings ----------
+function renderSettings() {
+  $('soundBtn').textContent = 'Sound: ' + (S.settings.sound ? 'On' : 'Off');
+  $('partBtn').textContent = 'Click effects: ' + (S.settings.particles ? 'On' : 'Off');
+  $('muteBtn').textContent = S.settings.sound ? '🔊' : '🔇';
+}
+const toggleSound = () => { S.settings.sound = !S.settings.sound; dirty = true; };
+$('soundBtn').addEventListener('click', toggleSound);
+$('muteBtn').addEventListener('click', toggleSound);
+$('partBtn').addEventListener('click', () => { S.settings.particles = !S.settings.particles; dirty = true; });
+$('saveBtn').addEventListener('click', () => { save(); toast('💾 Game saved'); });
+$('exportBtn').addEventListener('click', () => {
+  save();
+  const ta = $('saveText');
+  ta.value = encodeSave(); ta.select();
+  try { navigator.clipboard.writeText(ta.value).then(() => toast('📋 Save copied to clipboard'), () => {}); } catch (e) {}
+});
+$('importBtn').addEventListener('click', () => {
+  const txt = $('saveText').value;
+  if (!txt.trim()) { toast('Paste a save code first'); return; }
+  let obj;
+  try { obj = decodeSave(txt); } catch (e) { toast('❌ That save code is not valid'); return; }
+  modal('Load this save?', 'Your current progress will be replaced.', [
+    { label: 'Cancel', ghost: true },
+    { label: 'Load', fn: () => { S = hydrate(obj); S.lastSave = Date.now(); afterLoad(); save(); toast('✅ Save loaded'); } },
+  ]);
+});
+$('resetBtn').addEventListener('click', () => modal('Wipe everything?', 'This deletes <b>all</b> progress, including Clouds and achievements. This cannot be undone.', [
+  { label: 'Cancel', ghost: true },
+  { label: 'Wipe it', danger: true, fn: () => { S = freshState(); afterLoad(); save(); } },
+]));
+
+// ---------- logo easter egg ----------
+$('logo').addEventListener('click', () => { S.logoClicks++; tone(300 + S.logoClicks * 60, 200, .1, .08); });
+
+// ---------- big drop ----------
+// Pointer presses are handled on pointerdown for snappy mobile taps; the click event is only used for keyboard presses.
+let lastPointer = 0;
+bigDrop.addEventListener('pointerdown', e => { e.preventDefault(); lastPointer = performance.now(); doClick(e.clientX, e.clientY); });
+bigDrop.addEventListener('click', e => {
+  if (e.detail !== 0 || performance.now() - lastPointer < 800) return;
+  const r = bigDrop.getBoundingClientRect();
+  doClick(r.left + r.width / 2, r.top + r.height / 3);
+});
+bigDrop.addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- left panel ----------
+function renderLeft() {
+  $('dropsCount').textContent = fmt(S.drops);
+  $('dpsText').textContent = fmt(curDps);
+  const st = S.stage, next = STAGES[st + 1];
+  let p = 1;
+  if (next) {
+    const lo = Math.log10(Math.max(1, STAGES[st].need)), hi = Math.log10(next.need);
+    p = Math.min(1, Math.max(0, (Math.log10(Math.max(1, S.runTotal)) - lo) / (hi - lo)));
+    $('stageLabel').textContent = 'Next: ' + next.name + ' · ' + fmt(S.runTotal) + ' / ' + fmt(next.need);
+  } else {
+    $('stageLabel').textContent = 'Final form reached · ' + fmt(S.runTotal);
+  }
+  $('stageFill').style.width = (p * 100) + '%';
+  waterTarget = .12 + p * .5;
+  const bx = $('buffs');
+  bx.innerHTML = S.buffs.map(b => '<span class="buff">' + (b.type === 'flood' ? '🌊 Flood x7' : '🌀 Whirlpool x77') + ' · ' + Math.ceil(b.t) + 's</span>').join('');
+  document.title = fmt(S.drops) + ' drops · Drop to Ocean';
+}
+
+function renderAll() {
+  renderLeft();
+  renderGens();
+  renderUps();
+  renderPrestige();
+  renderSettings();
+  if (curTab === 'ach' || dirty) renderAch();
+  if (curTab === 'stats') renderStats();
+  dirty = false;
+}
+
+// ---------- water canvas ----------
+const cv = $('water'), cx = cv.getContext('2d');
+let waterLevel = .12, waterTarget = .12;
+function drawWater(time) {
+  const w = cv.clientWidth, h = cv.clientHeight, dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  cx.clearRect(0, 0, w, h);
+  waterLevel += (waterTarget - waterLevel) * .03;
+  const col = getComputedStyle(document.documentElement).getPropertyValue('--water').trim();
+  const t = time / 1000, base = h * (1 - waterLevel);
+  for (let layer = 0; layer < 3; layer++) {
+    cx.beginPath();
+    cx.moveTo(0, h);
+    const amp = 6 + layer * 3 + (hasBuff('flood') ? 6 : 0), off = layer * 12, sp = .8 + layer * .35;
+    for (let x = 0; x <= w; x += 8) cx.lineTo(x, base + off + Math.sin(x / (60 + layer * 20) + t * sp + layer) * amp);
+    cx.lineTo(w, h);
+    cx.closePath();
+    cx.globalAlpha = .28 + layer * .22;
+    cx.fillStyle = col;
+    cx.fill();
+  }
+  cx.globalAlpha = .35; cx.fillStyle = '#fff';
+  for (let i = 0; i < 14; i++) {
+    const bx = (i * 97.3 + Math.sin(i) * 40) % w, by = h - ((t * (14 + i * 3) + i * 53) % Math.max(1, h - base));
+    cx.beginPath(); cx.arc(bx, by, 1.5 + (i % 3), 0, Math.PI * 2); cx.fill();
+  }
+  cx.globalAlpha = 1;
+}
+
+// =====================================================================
+//  MAIN LOOP
+// =====================================================================
+let last = performance.now(), uiAcc = 0, achAcc = 0, saveAcc = 0, tickerAcc = 0;
+function frame(now) {
+  const dt = Math.max(0, (now - last) / 1000);
+  last = now;
+  tick(dt);
+  uiAcc += dt; achAcc += dt; saveAcc += dt; tickerAcc += dt;
+  if (uiAcc > .1 || dirty) { uiAcc = 0; renderAll(); }
+  if (achAcc > .5) { achAcc = 0; checkAch(); }
+  if (saveAcc > 10) { saveAcc = 0; save(); }
+  if (tickerAcc > 9) { tickerAcc = 0; showTicker(); }
+  drawWater(now);
+  requestAnimationFrame(frame);
+}
+// Keeps the game running at a slower pace when the tab is in the background (rAF pauses there).
+setInterval(() => {
+  const now = performance.now();
+  if (now - last > 900) { tick((now - last) / 1000); last = now; }
+}, 1000);
+addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+addEventListener('pagehide', save);
+
+function afterLoad() {
+  recalc();
+  curDps = dps();
+  applyTheme();
+  hideGolden();
+  upSig = '';
+  dirty = true;
+  renderAll();
+}
+
+const loaded = load();
+afterLoad();
+if (loaded) offlineProgress();
+else modal('💧 Drop to Ocean', 'You are a single drop of water.<br><br><b>Click the drop</b> to collect more water, buy <b>generators</b> ' +
+  'to collect it for you, and grow from a Droplet into an entire <b>Ocean</b>.<br><br>Watch out for ✨ <b>golden drops</b>!', [{ label: 'Let\'s flow' }]);
+save();
+requestAnimationFrame(frame);
+
+if (location.hash === '#debug') window.__game = { get S() { return S; }, tick, buyGen, buyUp, buyCloud, dps, clickValue, GENS, UPS, CLOUD_UPS,
+  visibleUps, cloudGain, maxAffordable, genCost, recalc, checkAch, startRun, prestige: () => {
+    const g = cloudGain(); S.prevRuns += S.runTotal; S.cloudsTotal += g; S.prestiges++; startRun(); recalc(); return g; } };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "drop-to-ocean",
+  "productName": "Drop to Ocean",
+  "version": "1.0.0",
+  "description": "Start as a single drop of water and grow into an entire ocean. An idle clicker game.",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "zip-web": "cd game && zip -r ../drop-to-ocean-web.zip ."
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.droptoocean.game",
+    "productName": "Drop to Ocean",
+    "files": ["game/**/*", "electron/**/*"],
+    "directories": { "output": "dist" },
+    "win": { "target": ["dir", "portable"] },
+    "mac": { "target": ["dir"] },
+    "linux": { "target": ["dir", "AppImage"] }
+  }
+}
