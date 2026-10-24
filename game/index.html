@@ -92,6 +92,13 @@
   .item .pr { color: var(--muted); font-size: 12px; margin-top: 3px; }
   .item .pr b { color: var(--fg); font-weight: 500; }
   .item.locked { opacity: .55; }
+  kbd { display: inline-block; min-width: 20px; padding: 0 5px; margin-right: 6px; border-radius: 5px; font: 600 11px/18px ui-monospace, monospace;
+    text-align: center; background: rgba(255,255,255,.1); border: 1px solid var(--line); border-bottom-width: 2px; color: var(--muted); vertical-align: 1px; }
+  .item.locked kbd { visibility: hidden; }
+  .keys { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+  .keys td { padding: 5px 4px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .keys td:first-child { white-space: nowrap; width: 1%; padding-right: 12px; }
+  @media (pointer: coarse) { .item kbd { display: none; } }
   .item.locked .ic { filter: grayscale(1) brightness(.4); }
   .buy { flex: none; min-width: 92px; background: var(--accent); color: #032033; border: 0; border-radius: 10px; padding: 7px 10px;
     font-size: 12px; line-height: 1.25; display: flex; flex-direction: column; align-items: center; }
@@ -241,6 +248,19 @@
         <button class="bigbtn ghost" id="soundBtn"></button>
         <button class="bigbtn ghost" id="partBtn"></button>
         <button class="bigbtn ghost" id="saveBtn">Save now</button>
+        <h3>Keyboard</h3>
+        <table class="keys">
+          <tr><td><kbd>Space</kbd><kbd>Enter</kbd></td><td>Collect drops</td></tr>
+          <tr><td><kbd>1</kbd>…<kbd>0</kbd><kbd>-</kbd><kbd>=</kbd></td><td>Buy generators 1–12</td></tr>
+          <tr><td><kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd></td><td>Buy amount: x1 / x10 / x100 / Max</td></tr>
+          <tr><td><kbd>U</kbd></td><td>Buy the cheapest upgrade (<kbd>Shift</kbd>+<kbd>U</kbd> buys all you can)</td></tr>
+          <tr><td><kbd>G</kbd></td><td>Catch the golden drop</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Evaporate</td></tr>
+          <tr><td><kbd>←</kbd><kbd>→</kbd></td><td>Switch tabs</td></tr>
+          <tr><td><kbd>M</kbd></td><td>Sound on / off</td></tr>
+          <tr><td><kbd>S</kbd></td><td>Save now</td></tr>
+          <tr><td><kbd>Enter</kbd><kbd>Esc</kbd></td><td>Confirm / close pop-ups</td></tr>
+        </table>
         <h3>Backup</h3>
         <p class="hint">Copy your save to keep it safe, or paste a save to load it.</p>
         <textarea id="saveText" spellcheck="false" placeholder="Your save code appears here"></textarea>
@@ -313,6 +333,7 @@ const GENS = [
   { id: 'comet',     name: 'Ice Comet',        icon: '☄️', base: 1.4e13, rate: 3.3e10, stage: 6, desc: 'Delivering water from deep space.' },
 ];
 
+const GEN_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '='];
 const TIER_OWN = [10, 25, 50, 100, 150];
 const TIER_COST = [10, 100, 2000, 1e6, 1e9];
 const TIER_NAME = ['Polished', 'Reinforced', 'Enchanted', 'Abyssal', 'Primordial'];
@@ -516,8 +537,9 @@ function spawnGolden() {
 }
 function hideGolden() { goldenEl.style.display = 'none'; goldenLife = 0; }
 function nextGoldenDelay() { return (90 + Math.random() * 90) * (S.cloudUps.silver ? 0.5 : 1); }
-goldenEl.addEventListener('click', e => {
+goldenEl.addEventListener('click', () => {
   if (goldenLife <= 0) return;
+  const gr = goldenEl.getBoundingClientRect();
   hideGolden();
   S.golden++;
   const r = Math.random(), d = mods.goldDur;
@@ -525,7 +547,7 @@ goldenEl.addEventListener('click', e => {
     const amt = Math.max(13, Math.min(S.drops * 0.15, dps(false) * 900));
     gain(amt);
     toast('✨ Lucky Splash!', '+' + fmt(amt) + ' drops', true);
-    spawnFloat(e.clientX, e.clientY, '+' + fmt(amt));
+    spawnFloat(gr.left + gr.width / 2, gr.top + gr.height / 2, '+' + fmt(amt));
   } else if (r < 0.8) {
     addBuff('flood', 30 * d);
     toast('🌊 FLOOD!', 'Production x7 for ' + Math.round(30 * d) + ' seconds', true);
@@ -757,14 +779,16 @@ function showTicker() {
 }
 
 // ---------- tabs ----------
-document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
-  curTab = t.dataset.tab;
-  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
-  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'tab-' + curTab));
-  if (curTab === 'ach') newAch = 0;
-  if (curTab === 'settings') $('saveText').value = '';
+const TAB_ORDER = ['gens', 'ups', 'prestige', 'ach', 'stats', 'settings'];
+function selectTab(name) {
+  curTab = name;
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'tab-' + name));
+  if (name === 'ach') newAch = 0;
+  if (name === 'settings') $('saveText').value = '';
   dirty = true;
-}));
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => selectTab(t.dataset.tab)));
 
 // ---------- buy amount ----------
 document.querySelectorAll('#buyAmt button').forEach(b => b.addEventListener('click', () => { S.settings.buy = +b.dataset.n; dirty = true; }));
@@ -774,10 +798,11 @@ const genEls = {};
 GENS.forEach(g => {
   const el = document.createElement('div');
   el.className = 'item';
-  el.innerHTML = '<div class="ic"></div><div class="info"><div class="nm"><span class="n"></span><span class="own"></span></div>' +
+  el.innerHTML = '<div class="ic"></div><div class="info"><div class="nm"><span><kbd class="key"></kbd><span class="n"></span></span><span class="own"></span></div>' +
     '<div class="ds"></div><div class="pr"></div></div><button class="buy"><span class="bq"></span><b class="bc"></b></button>';
   const btn = el.querySelector('.buy');
   btn.addEventListener('click', () => buyGen(g));
+  el.querySelector('.key').textContent = GEN_KEYS[GENS.indexOf(g)];
   $('genList').appendChild(el);
   genEls[g.id] = { el, ic: el.querySelector('.ic'), n: el.querySelector('.n'), own: el.querySelector('.own'), ds: el.querySelector('.ds'),
     pr: el.querySelector('.pr'), btn, bq: el.querySelector('.bq'), bc: el.querySelector('.bc') };
@@ -956,6 +981,53 @@ bigDrop.addEventListener('click', e => {
 });
 bigDrop.addEventListener('contextmenu', e => e.preventDefault());
 
+// ---------- keyboard ----------
+addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  const k = e.key, lk = k.toLowerCase();
+
+  if (!$('modal').hidden) {
+    const act = $('mActions');
+    // Space only closes single-button pop-ups, so mashing it never confirms Evaporate or Wipe.
+    if (k === 'Enter' || (k === ' ' && act.children.length === 1)) { e.preventDefault(); if (!e.repeat) act.lastChild.click(); }
+    else if (k === 'Escape') { e.preventDefault(); act.firstChild.click(); }
+    else if (k === ' ') e.preventDefault();
+    return;
+  }
+
+  if (k === ' ' || k === 'Enter') {
+    e.preventDefault();
+    if (e.repeat) return;
+    lastPointer = performance.now();
+    const r = bigDrop.getBoundingClientRect();
+    doClick(r.left + r.width / 2, r.top + r.height / 3);
+    return;
+  }
+  const gi = GEN_KEYS.indexOf(k);
+  if (gi >= 0) {
+    const g = GENS[gi];
+    if (g.stage <= S.stage || (S.gens[g.id] || 0) > 0) buyGen(g);
+    return;
+  }
+  if (lk === 'u') {
+    const list = visibleUps().filter(u => S.drops >= u.cost);
+    for (const u of e.shiftKey ? list : list.slice(0, 1)) buyUp(u);
+    return;
+  }
+  const amt = { z: 1, x: 10, c: 100, v: -1 }[lk];
+  if (amt) { S.settings.buy = amt; dirty = true; return; }
+  if (lk === 'g') { goldenEl.click(); return; }
+  if (lk === 'e') { selectTab('prestige'); evaporate(); return; }
+  if (lk === 'm') { toggleSound(); return; }
+  if (lk === 's') { save(); toast('💾 Game saved'); return; }
+  if (k === 'ArrowLeft' || k === 'ArrowRight') {
+    e.preventDefault();
+    const i = TAB_ORDER.indexOf(curTab) + (k === 'ArrowRight' ? 1 : -1);
+    selectTab(TAB_ORDER[(i + TAB_ORDER.length) % TAB_ORDER.length]);
+  }
+});
+
 // ---------- left panel ----------
 function renderLeft() {
   $('dropsCount').textContent = fmt(S.drops);
@@ -1055,7 +1127,8 @@ const loaded = load();
 afterLoad();
 if (loaded) offlineProgress();
 else modal('💧 Drop to Ocean', 'You are a single drop of water.<br><br><b>Click the drop</b> to collect more water, buy <b>generators</b> ' +
-  'to collect it for you, and grow from a Droplet into an entire <b>Ocean</b>.<br><br>Watch out for ✨ <b>golden drops</b>!', [{ label: 'Let\'s flow' }]);
+  'to collect it for you, and grow from a Droplet into an entire <b>Ocean</b>.<br><br>Watch out for ✨ <b>golden drops</b>!<br><br>' +
+  '⌨️ Keyboard: <b>Space</b> collects, <b>1–9</b> buys generators, <b>U</b> buys upgrades, <b>G</b> catches golden drops. All keys are in Settings.', [{ label: 'Let\'s flow' }]);
 save();
 requestAnimationFrame(frame);
 
