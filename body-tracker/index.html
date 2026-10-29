@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="جسمي">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>متتبع شد الجسم</title>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mu:#667085;--ac:#0f766e;--ac2:#e6f4f2;--bd:#e4e7ec;--good:#15803d;--bad:#b42318}
@@ -30,6 +33,9 @@ table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:7px 4px;b
 nav{position:fixed;bottom:0;inset-inline:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:space-around;padding:6px 0 max(6px,env(safe-area-inset-bottom))}
 nav button{background:none;color:var(--mu);font-size:12px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px}
 nav button.on{color:var(--ac);font-weight:700}nav i{font-style:normal;font-size:20px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips button{padding:7px 10px;font-size:13px;background:var(--ac2);color:var(--tx)}
+.bar{height:10px;background:var(--ac2);border-radius:6px;overflow:hidden;margin:4px 0 10px}.bar div{height:100%;background:var(--ac)}
+code{background:var(--ac2);padding:2px 5px;border-radius:5px;direction:ltr;display:inline-block;font-size:12px;word-break:break-all}
 .tab{display:none}.tab.on{display:block}
 .ins{padding:9px 0;border-bottom:1px dashed var(--bd);font-size:14px;line-height:1.6}.ins:last-child{border:0}
 .good{color:var(--good)}.bad{color:var(--bad)}
@@ -42,7 +48,28 @@ ul{margin:4px 0;padding-inline-start:20px;font-size:14px;line-height:1.8}
 <header><h1>💪 متتبع شد الجسم — 12 أسبوع</h1><div class="sub" id="weekLbl"></div></header>
 <main>
 
-<section class="tab on" id="t-home">
+<section class="tab on" id="t-day">
+  <div class="card"><h2>اليوم</h2><div id="dayBars"></div></div>
+  <div class="card"><h2>💧 الماء</h2>
+    <div class="chips"><button onclick="addLog('water',{ml:250})">+ كوب 250</button><button onclick="addLog('water',{ml:500})">+ قارورة 500</button><button onclick="addLog('water',{ml:1000})">+ لتر</button></div></div>
+  <div class="card"><h2>🍽️ سجّل أكلك</h2>
+    <label>وش أكلت؟ (اكتبها عادي: "3 بيض وخبز وموزة")</label>
+    <input id="fTxt" oninput="guess()">
+    <div class="row" style="margin-top:8px">
+      <div><label>سعرات</label><input type="number" id="fK" inputmode="numeric"></div>
+      <div><label>بروتين (غ)</label><input type="number" id="fP" inputmode="numeric"></div>
+    </div>
+    <p class="sub" id="fGuess">أقدّر السعرات تلقائيًا للأكلات المعروفة، وتقدر تعدلها.</p>
+    <div class="chips" id="quickFood"></div>
+    <button onclick="addFood()">سجّل الأكل</button></div>
+  <div class="card"><h2>🚶 نشاط</h2>
+    <div class="row"><div><label>النوع</label><select id="aT"><option>مشي</option><option>نادي</option><option>كارديو</option><option>خطوات</option></select></div>
+    <div><label>دقائق / خطوات</label><input type="number" id="aV" inputmode="numeric"></div></div>
+    <button onclick="addAct()" style="margin-top:8px">سجّل</button></div>
+  <div class="card"><h2>سجل اليوم</h2><table><tbody id="dayList"></tbody></table></div>
+</section>
+
+<section class="tab" id="t-home">
   <div class="card"><h2>ملخصك</h2><div class="grid" id="kpis"></div></div>
   <div class="card"><h2>تحليل التطور</h2><div id="insights"></div></div>
   <div class="card"><h2>متوسط الوزن الأسبوعي</h2><div id="chW"></div></div>
@@ -96,6 +123,26 @@ ul{margin:4px 0;padding-inline-start:20px;font-size:14px;line-height:1.8}
   </div>
   <div class="card"><h2>خطة التمرين</h2><div id="planList"></div>
     <p class="sub">اترك 1–2 تكرار قبل الفشل • راحة 2–3 د للمركبة و60–120 ث للعزل • إذا وصلت أعلى التكرارات بتكنيك صحيح زد الوزن.</p></div>
+  <div class="card"><h2>🔔 تذكير الماء</h2>
+    <div class="row"><div><label>كل كم ساعة</label><select id="rI"><option value="0">مطفي</option><option value="1">1</option><option value="1.5">1.5</option><option value="2" selected>2</option><option value="3">3</option></select></div>
+    <div><label>من</label><input type="time" id="rFrom" value="09:00"></div><div><label>إلى</label><input type="time" id="rTo" value="23:00"></div>
+    <div><label>هدف الماء (لتر)</label><input type="number" step="0.5" id="rGoal" value="3"></div></div>
+    <button onclick="saveRem()" style="margin-top:8px">تفعيل التذكير</button>
+    <p class="sub">التنبيه يشتغل والتطبيق مفتوح أو بالخلفية. للتنبيه المضمون حتى والجوال مقفل استخدم أتمتة الاختصارات (تحت).</p></div>
+  <div class="card"><h2>🎙️ سيري والاختصارات</h2>
+    <p class="sub">كل رابط من هذي يسجّل مباشرة لما ينفتح. حطه في اختصار (Shortcuts) وسمّه، وقل لسيري اسمه:</p>
+    <ul id="siriList"></ul>
+    <details><summary>طريقة عمل اختصار "سجل أكل"</summary><ul>
+      <li>افتح تطبيق <b>الاختصارات</b> ← <b>+</b></li>
+      <li>أضف <b>إملاء النص</b> (Dictate Text)</li>
+      <li>أضف <b>عنوان URL</b> واكتب رابط الأكل أعلاه، وبدّل كلمة <code>TEXT</code> بـ "النص المُملى"</li>
+      <li>أضف <b>فتح عناوين URL</b>، وسمّ الاختصار "سجل أكل"</li>
+      <li>الحين قل: "يا سيري، سجل أكل" ← "دجاج ورز" ✅</li></ul></details>
+    <details><summary>تذكير ماء مضمون (أتمتة)</summary><ul>
+      <li>الاختصارات ← <b>الأتمتة</b> ← <b>+</b> ← <b>وقت من اليوم</b> (مثلًا 11:00)</li>
+      <li>اختر "تشغيل فورًا" وأضف <b>عرض إشعار</b>: "💧 اشرب ماء"</li>
+      <li>كررها لأوقات ثانية (1، 3، 5، 7، 9)</li></ul></details>
+  </div>
   <div class="card"><h2>نسخ احتياطي</h2>
     <div class="row"><button class="ghost" onclick="exportData()">تصدير البيانات</button>
     <label class="ghost" style="text-align:center;border:1px solid var(--bd);border-radius:10px;padding:11px;color:var(--ac);cursor:pointer">استيراد<input type="file" accept=".json" onchange="importData(this)" hidden></label></div>
@@ -104,7 +151,8 @@ ul{margin:4px 0;padding-inline-start:20px;font-size:14px;line-height:1.8}
 </main>
 
 <nav>
-  <button class="on" data-t="home"><i>📊</i>التحليل</button>
+  <button class="on" data-t="day"><i>📝</i>اليوم</button>
+  <button data-t="home"><i>📊</i>التحليل</button>
   <button data-t="body"><i>⚖️</i>الجسم</button>
   <button data-t="gym"><i>🏋️</i>النادي</button>
   <button data-t="plan"><i>📋</i>الخطة</button>
@@ -120,7 +168,8 @@ const PLAN={
 const K='bodyTracker.v1';
 const today=()=>new Date().toISOString().slice(0,10);
 let D;try{D=JSON.parse(localStorage.getItem(K))}catch(e){}
-D=D||{profile:{h:178,age:'',act:1.55,start:today()},body:[{d:today(),w:72}],gym:[]};
+D=D||{log:[],rem:{i:2,from:'09:00',to:'23:00',goal:3},profile:{h:178,age:'',act:1.55,start:today()},body:[{d:today(),w:72}],gym:[]};
+D.log=D.log||[];D.rem=D.rem||{i:2,from:'09:00',to:'23:00',goal:3};
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(D))}catch(e){}};
 const $=id=>document.getElementById(id);
 const f1=n=>n==null||isNaN(n)?'—':(+n).toFixed(1).replace(/\.0$/,'');
@@ -196,6 +245,10 @@ function analyze(){
   const wk=new Set(D.gym.filter(g=>days(g.d,today())<7).map(g=>g.d)).size;
   out.push(`📅 تمرنت ${wk} أيام آخر 7 أيام (الهدف 4).`);
  } else out.push('🏋️ سجّل أوزانك في النادي عشان أتابع قوتك.');
+ const last7=[...Array(7)].map((_,i)=>dayTot(new Date(Date.now()-i*864e5).toISOString().slice(0,10))).filter(t=>t.L.length);
+ if(last7.length>=3){const ak=last7.reduce((a,t)=>a+t.k,0)/last7.length,ap=last7.reduce((a,t)=>a+t.p,0)/last7.length,am=last7.reduce((a,t)=>a+t.ml,0)/last7.length,K=kcal().kc,Pt=Math.round((lastW||72)*2);
+  out.push(`🍽️ متوسط أكلك آخر أسبوع ${Math.round(ak)} سعرة (${ak>K+200?'<span class="bad">فوق هدفك</span>':ak<K-400?'<span class="bad">أقل بكثير من هدفك</span>':'<span class="good">ضمن هدفك</span>'}) و${Math.round(ap)}غ بروتين${ap<Pt*.8?' — <span class="bad">زد البروتين</span>':' ✅'}.`);
+  out.push(`💧 متوسط شربك ${(am/1000).toFixed(1)} لتر يوميًا${am<D.rem.goal*800?' — <span class="bad">أقل من هدفك</span>':' ✅'}.`)}
  if(ww.length>=3&&wa.length>=2&&Math.abs(ww.at(-1).v-ww[0].v)<0.6&&wa.at(-1).v<wa[0].v)out.push('<span class="good">🔥 وزنك ثابت وخصرك ينزل = تبني عضل وتحرق دهون. هذا هو الهدف!</span>');
  return out;
 }
@@ -207,6 +260,7 @@ function kcal(){
 function render(){
  const P=D.profile,wk=Math.min(12,Math.max(1,Math.floor(days(P.start,today())/7)+1));
  $('weekLbl').textContent=`الأسبوع ${wk} من 12`;
+ $('rI').value=D.rem.i;$('rFrom').value=D.rem.from;$('rTo').value=D.rem.to;$('rGoal').value=D.rem.goal;
  const lastW=[...D.body].reverse().find(b=>b.w)?.w,lastWa=[...D.body].reverse().find(b=>b.wa)?.wa,firstW=D.body.find(b=>b.w)?.w;
  const bmi=lastW?lastW/((P.h/100)**2):null,{kc,note}=kcal(),prot=Math.round((lastW||72)*2);
  $('kpis').innerHTML=[[f1(lastW),'الوزن الحالي (كجم)'],[lastW&&firstW?sgn(lastW-firstW):'—','التغير من البداية'],[f1(lastWa),'الخصر (سم)'],[f1(bmi),'مؤشر كتلة الجسم'],[kc,'سعراتك اليومية'],[prot+' غ','البروتين اليومي']].map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
@@ -219,7 +273,54 @@ function render(){
  const fat=Math.round(kc*.27/9),carb=Math.round((kc-prot*4-fat*9)/4);
  $('macros').innerHTML=[[kc,'سعرة'],[prot+' غ','بروتين'],[carb+' غ','كربوهيدرات'],[fat+' غ','دهون']].map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('')+`<p class="sub" style="grid-column:1/-1">${note}</p>`;
  $('pH').value=P.h;$('pAge').value=P.age;$('pAct').value=P.act;$('pStart').value=P.start;
- hint();
+ hint();renderDay(kc,prot);
+}
+const FOODS=[['بيض',78,6.5,'بيضة|بيض|بيضات'],['خبز',160,5,'خبز|عيش|صامولي|تميس'],['موز',105,1.3,'موز|موزة'],['دجاج',280,45,'دجاج|صدر|شيش|مشوي'],['رز',330,6,'رز|أرز|كبسة|مندي'],['سمك',220,40,'سمك|تونة|سلمون'],['لحم',300,35,'لحم|ستيك|كباب'],['زبادي بروتين',150,20,'زبادي بروتين|يوناني'],['زبادي',100,6,'زبادي|لبن'],['شوفان',150,5,'شوفان'],['حليب',150,8,'حليب'],['بطاطس',250,5,'بطاطس|بطاطا'],['سلطة',80,2,'سلطة|خضار'],['تمر',23,0.2,'تمر|تمرة|تمرات'],['برجر',550,28,'برجر|همبرجر'],['بيتزا',285,12,'بيتزا'],['شاورما',450,25,'شاورما'],['بروتين شيك',130,25,'شيك|سكوب|واي'],['قهوة',5,0,'قهوة|امريكانو'],['لاتيه',190,10,'لاتيه|كابتشينو'],['تفاح',95,0.5,'تفاح|تفاحة'],['فول',230,13,'فول'],['جبن',100,6,'جبن|جبنة'],['مكسرات',170,6,'مكسرات|لوز']];
+const NUMS={'واحد':1,'وحده':1,'اثنين':2,'ثنتين':2,'ثلاث':3,'ثلاثة':3,'اربع':4,'أربع':4,'خمس':5,'نص':.5};
+function estFood(t){
+ let k=0,p=0,hits=[];
+ for(const part of t.split(/[,،+]| و/)){for(const [n,kc,pr,re] of FOODS){if(new RegExp(re).test(part)){const m=part.match(/(\d+(\.\d+)?)/),w=part.split(/\s+/).map(x=>NUMS[x]).find(Boolean);const q=m?+m[1]:w||1;k+=kc*q;p+=pr*q;hits.push((q!=1?q+' ':'')+n);break}}}
+ return {k:Math.round(k),p:Math.round(p),hits};
+}
+function guess(){const e=estFood($('fTxt').value);if(e.hits.length){$('fK').value=e.k;$('fP').value=e.p;$('fGuess').textContent='تقدير: '+e.hits.join(' + ')+' ≈ '+e.k+' سعرة'}}
+function addLog(t,x){D.log.push({t,ts:Date.now(),d:today(),...x});save();render();if(t=='water')toast('💧 +'+x.ml+' مل')}
+function addFood(txt,k,p){
+ txt=txt||$('fTxt').value.trim();if(!txt)return alert('اكتب وش أكلت');
+ const e=estFood(txt);k=k!=null?k:(parseFloat($('fK').value)||e.k);p=p!=null?p:(parseFloat($('fP').value)||e.p);
+ addLog('food',{txt,k,p});$('fTxt').value=$('fK').value=$('fP').value='';toast('🍽️ تم تسجيل: '+txt);
+}
+function addAct(){const v=parseFloat($('aV').value);if(isNaN(v))return;addLog('act',{a:$('aT').value,v});$('aV').value=''}
+function toast(m){const d=document.createElement('div');d.textContent=m;d.style.cssText='position:fixed;top:14px;inset-inline:16px;background:var(--ac);color:#fff;padding:12px;border-radius:12px;text-align:center;z-index:9';document.body.append(d);setTimeout(()=>d.remove(),2200)}
+function dayTot(d){const L=D.log.filter(x=>x.d==d);return{L,ml:L.filter(x=>x.t=='water').reduce((a,x)=>a+x.ml,0),k:L.filter(x=>x.t=='food').reduce((a,x)=>a+x.k,0),p:L.filter(x=>x.t=='food').reduce((a,x)=>a+x.p,0)}}
+function renderDay(kc,prot){
+ const T=dayTot(today()),g=D.rem.goal*1000,bar=(v,m,l,u)=>`<div class="sub">${l}: <b>${Math.round(v)}</b> / ${m} ${u}</div><div class="bar"><div style="width:${Math.min(100,v/m*100)}%"></div></div>`;
+ $('dayBars').innerHTML=bar(T.ml,g,'💧 ماء',' مل')+bar(T.k,kc,'🔥 سعرات','')+bar(T.p,prot,'🥩 بروتين','غ');
+ const ic={water:'💧',food:'🍽️',act:'🚶',weight:'⚖️'};
+ $('dayList').innerHTML=T.L.map(x=>[x,D.log.indexOf(x)]).reverse().map(([x,i])=>`<tr><td>${new Date(x.ts).toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'})}</td><td>${ic[x.t]} ${x.t=='water'?x.ml+' مل':x.t=='food'?x.txt+' <span class="sub">('+x.k+' سعرة، '+x.p+'غ)</span>':x.t=='act'?x.a+' '+x.v:x.w+' كجم'}</td><td><button class="del" onclick="del('log',${i})">✕</button></td></tr>`).join('')||'<tr><td class="sub">ما سجلت شي اليوم</td></tr>';
+ $('quickFood').innerHTML=[...new Set(D.log.filter(x=>x.t=='food').map(x=>x.txt))].slice(-6).map(t=>`<button onclick="addFood(this.textContent)">${t}</button>`).join('');
+ const base=location.href.split(/[?#]/)[0];
+ $('siriList').innerHTML=[['اشرب ماء','?water=250'],['سجل أكل','?food=TEXT'],['سجل وزني','?weight=NUMBER'],['سجل مشي','?walk=MINUTES']].map(([n,q])=>`<li>"${n}": <code>${base+q}</code></li>`).join('');
+}
+function handleURL(){
+ const q=new URLSearchParams(location.search);if(![...q.keys()].length)return;
+ if(q.get('water'))addLog('water',{ml:+q.get('water')||250});
+ if(q.get('food'))addFood(q.get('food'),q.get('kcal')!=null?+q.get('kcal'):null,q.get('p')!=null?+q.get('p'):null);
+ if(q.get('weight')){const w=parseFloat(q.get('weight'));if(w){D.body.push({d:today(),w});D.body.sort((a,b)=>a.d<b.d?-1:1);addLog('weight',{w})}}
+ if(q.get('walk'))addLog('act',{a:'مشي',v:+q.get('walk')});
+ history.replaceState(null,'',location.pathname);
+}
+async function saveRem(){
+ D.rem={i:+$('rI').value,from:$('rFrom').value,to:$('rTo').value,goal:+$('rGoal').value||3};save();
+ if(D.rem.i&&'Notification'in window&&Notification.permission!='granted'){const r=await Notification.requestPermission();if(r!='granted')alert('لازم تسمح بالإشعارات. في الآيفون: ثبّت التطبيق على الشاشة الرئيسية أولًا.')}
+ toast(D.rem.i?'🔔 التذكير مفعّل':'التذكير مطفي');render();
+}
+function checkRem(){
+ const R=D.rem;if(!R.i)return;const n=new Date(),hm=n.toTimeString().slice(0,5);if(hm<R.from||hm>R.to)return;
+ const lastW=Math.max(0,...D.log.filter(x=>x.t=='water').map(x=>x.ts),D.lastNotif||0);
+ if(Date.now()-lastW<R.i*36e5)return;
+ D.lastNotif=Date.now();save();const T=dayTot(today()),msg=`شربت ${(T.ml/1000).toFixed(1)} من ${R.goal} لتر اليوم`;
+ if('Notification'in window&&Notification.permission=='granted')navigator.serviceWorker?.ready.then(r=>r.showNotification('💧 وقت الماء',{body:msg,icon:'icon-192.png',tag:'water'})).catch(()=>new Notification('💧 وقت الماء',{body:msg}));
+ else toast('💧 وقت الماء — '+msg);
 }
 function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='body-tracker-'+today()+'.json';a.click()}
 function importData(inp){const r=new FileReader();r.onload=()=>{try{D=JSON.parse(r.result);save();render();alert('تم')}catch(e){alert('ملف غير صالح')}};r.readAsText(inp.files[0])}
@@ -227,7 +328,9 @@ function importData(inp){const r=new FileReader();r.onload=()=>{try{D=JSON.parse
 $('gDay').innerHTML=Object.keys(PLAN).map(k=>`<option>${k}</option>`).join('');
 $('planList').innerHTML=Object.entries(PLAN).map(([d,l])=>`<details><summary>${d}</summary><ul>${l.map(([n,s])=>`<li>${n} — ${s}</li>`).join('')}</ul></details>`).join('');
 $('bDate').value=$('gDate').value=today();
-fillEx();render();
+handleURL();fillEx();render();
+setInterval(checkRem,6e4);checkRem();
+if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
