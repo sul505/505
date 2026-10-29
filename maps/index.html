@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>خرائط</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#ffffff;
+  --fg:#202124;
+  --muted:#5f6368;
+  --line:#dadce0;
+  --soft:#f1f3f4;
+  --brand:#1a73e8;
+  --brand-soft:#e8f0fe;
+  --brand-ink:#174ea6;
+  --ok:#188038;
+  --shadow:0 1px 2px rgba(60,64,67,.3),0 2px 6px 2px rgba(60,64,67,.15);
+  font-family:"IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--brand)}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+#app{display:flex;height:100%}
+#panel{width:390px;flex:none;display:flex;flex-direction:column;min-height:0;background:var(--bg);border-inline-start:1px solid var(--line);z-index:500}
+#content{flex:1;min-height:0;overflow:auto;padding:4px 16px 24px}
+#map{flex:1;min-width:0;height:100%}
+
+/* header */
+.bar-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:32px;height:32px;border-radius:10px;background:var(--brand);display:grid;place-items:center;color:#fff}
+.brand strong{font-size:18px}
+.head-actions{display:flex;gap:4px}
+
+/* search */
+.search{position:relative;min-width:0}
+.search.top{margin:4px 14px 10px}
+.box{display:flex;align-items:center;gap:6px;height:46px;padding:0 6px 0 12px;background:var(--soft);border:1px solid transparent;border-radius:24px}
+.box:focus-within{background:#fff;border-color:var(--line);box-shadow:var(--shadow)}
+.box input{flex:1;min-width:0;height:100%;border:0;outline:none;background:transparent;font-size:16px}
+.ico{display:grid;color:var(--muted)}
+.icon-btn{width:36px;height:36px;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;flex:none;color:var(--muted)}
+.icon-btn:hover{background:rgba(60,64,67,.08);color:var(--fg)}
+.icon-btn.sm{width:30px;height:30px}
+.suggest{position:absolute;top:calc(100% + 6px);inset-inline:0;margin:0;padding:6px 0;list-style:none;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(60,64,67,.25);max-height:340px;overflow:auto;z-index:20}
+.suggest li{padding:10px 16px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.suggest li:not(.h):hover,.suggest li[aria-selected="true"]{background:var(--soft)}
+.suggest li.h{cursor:default;font-size:12px;font-weight:600;color:var(--muted);padding:6px 16px}
+.suggest .t{font-size:15px;font-weight:600}
+.suggest .s{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* content */
+.subhead{display:flex;align-items:center;gap:6px;margin:4px -8px 6px}
+.subhead h2{font-size:18px;font-weight:600;margin:0}
+.title{font-size:20px;font-weight:600;margin:8px 0 6px}
+.card-title{font-size:22px;font-weight:600;line-height:1.35;margin:10px 0 4px;overflow-wrap:anywhere}
+.muted{color:var(--muted);font-size:14px;line-height:1.7;margin:4px 0}
+.pad{padding:12px 0}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:18px;padding:8px 14px;font-size:14px;font-weight:600;background:var(--brand);color:#fff}
+.btn.light{background:var(--brand-soft);color:var(--brand-ink)}
+.btn:hover{filter:brightness(.96)}
+.rows{border-top:1px solid var(--line)}
+.row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.6}
+.row .k{width:96px;flex:none;color:var(--muted)}
+.row .v{flex:1;min-width:0;overflow-wrap:anywhere}
+.num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
+.section{font-size:13px;font-weight:600;color:var(--muted);margin:18px 0 6px}
+.grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.item-row{display:flex;align-items:center;gap:4px}
+.item{flex:1;min-width:0;display:flex;gap:12px;align-items:center;border:0;background:none;padding:10px 8px;border-radius:12px;text-align:start}
+.item:hover{background:var(--soft)}
+.item .t{font-weight:600;font-size:15px}
+.item .s{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{width:36px;height:36px;border-radius:50%;background:var(--brand-soft);color:var(--brand-ink);display:grid;place-items:center;flex:none}
+
+/* route */
+.route-form{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:center;margin:4px 0 8px}
+.letter{width:24px;height:24px;border-radius:50%;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.letter.a{background:var(--ok)}
+.letter.b{background:var(--brand)}
+.chips-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:#fff;border-radius:18px;padding:6px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--brand-soft);border-color:#d2e3fc;color:var(--brand-ink);font-weight:600}
+.route-sum{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:8px 0 6px}
+.time{font-size:26px;font-weight:600;color:var(--ok)}
+.steps{list-style:none;margin:6px 0 0;padding:0;border-top:1px solid var(--line)}
+.step{width:100%;display:flex;gap:12px;align-items:flex-start;padding:12px 6px;border:0;border-bottom:1px solid var(--line);background:none;text-align:start;border-radius:0}
+.step:hover{background:var(--soft)}
+.step .n{width:26px;height:26px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:12px;font-weight:600;flex:none}
+.step .t{font-size:14px;line-height:1.6}
+.step .s{font-size:12px;color:var(--muted)}
+
+/* map controls */
+.ctl .bar{background:#fff;border-radius:8px;box-shadow:var(--shadow);overflow:hidden}
+.ctl .bar button{width:36px;height:36px;border:0;background:#fff;display:grid;place-items:center;color:var(--muted)}
+.ctl .bar button:hover{background:var(--soft);color:var(--fg)}
+.layers{display:flex;gap:2px;background:#fff;border-radius:8px;box-shadow:var(--shadow);padding:3px}
+.layers button{border:0;background:transparent;border-radius:6px;padding:6px 10px;font-size:13px;color:var(--fg)}
+.layers button[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
+.coords{background:rgba(255,255,255,.92);padding:2px 8px;font-size:12px;border-radius:4px;margin:0 0 4px;color:var(--muted);font-variant-numeric:tabular-nums;direction:ltr}
+.me{width:18px;height:18px;border-radius:50%;background:#4285f4;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);animation:pulse 2s infinite}
+@keyframes pulse{to{box-shadow:0 0 0 16px rgba(66,133,244,0)}}
+
+.toast{position:fixed;bottom:28px;left:calc(50% + 195px);transform:translateX(-50%);background:#202124;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;z-index:3000}
+.toast.show{opacity:1}
+
+/* small screens: panel becomes a bottom sheet */
+@media (max-width:760px){
+  #panel{position:fixed;inset-inline:0;bottom:0;width:auto;max-height:46vh;border:0;border-radius:18px 18px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);z-index:1000}
+  #map{position:fixed;inset:0;height:100%}
+  .leaflet-bottom{bottom:46vh}
+  .coords{display:none}
+  .toast{left:50%}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel" aria-label="لوحة المعلومات">
+    <header class="bar-top">
+      <div class="brand">
+        <span class="logo" data-icon="pin"></span>
+        <strong>خرائط</strong>
+      </div>
+      <div class="head-actions">
+        <button type="button" class="icon-btn" data-act="route" aria-label="الاتجاهات" title="الاتجاهات"><span data-icon="route"></span></button>
+        <button type="button" class="icon-btn" data-act="saved" aria-label="المحفوظات" title="المحفوظات"><span data-icon="saved"></span></button>
+      </div>
+    </header>
+    <div class="search top">
+      <div class="box">
+        <span class="ico" data-icon="search"></span>
+        <input id="q" type="text" placeholder="ابحث في الخرائط" autocomplete="off" role="combobox" aria-autocomplete="list" aria-label="ابحث عن مكان">
+        <button type="button" class="icon-btn sm" data-clear aria-label="مسح البحث" hidden><span data-icon="close"></span></button>
+      </div>
+      <ul class="suggest" role="listbox" hidden></ul>
+    </div>
+    <main id="content"></main>
+  </aside>
+  <div id="map" role="region" aria-label="الخريطة"></div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const svg = (paths, size = 18) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const ICON = {
+  search: svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>'),
+  pin: svg('<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+  route: svg('<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h5"/>'),
+  saved: svg('<path d="M6 3h12v18l-6-4-6 4z"/>'),
+  locate: svg('<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>'),
+  close: svg('<path d="M6 6l12 12M18 6 6 18"/>', 16),
+  copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>', 16),
+  share: svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>', 16),
+  swap: svg('<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>'),
+  trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 16),
+};
+document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = ICON[el.dataset.icon] || ''; });
+
+const store = {
+  get(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } },
+};
+
+const nf = new Intl.NumberFormat('ar', { maximumFractionDigits: 1 });
+const fmtDist = m => (m < 1000 ? `${nf.format(Math.round(m))} م` : `${nf.format(m / 1000)} كم`);
+const fmtDur = s => {
+  const mins = Math.max(1, Math.round(s / 60));
+  if (mins < 60) return `${nf.format(mins)} دقيقة`;
+  const h = Math.floor(mins / 60), r = mins % 60;
+  return `${nf.format(h)} ساعة${r ? ` و${nf.format(r)} دقيقة` : ''}`;
+};
+const fmtClock = secs => new Date(Date.now() + secs * 1000).toLocaleTimeString('ar', { hour: 'numeric', minute: '2-digit' });
+const sameSpot = (a, b) => Math.abs(a.lat - b.lat) < 1e-6 && Math.abs(a.lng - b.lng) < 1e-6;
+
+function dms(v, pos, neg) {
+  const t = Math.round(Math.abs(v) * 36000); // tenths of an arc-second
+  const d = Math.floor(t / 36000), m = Math.floor((t % 36000) / 600), s = (t % 600) / 10;
+  return `${d}° ${m}′ ${s.toFixed(1)}″ ${v >= 0 ? pos : neg}`;
+}
+
+const TURN_AR = { left: 'يساراً', right: 'يميناً', 'sharp left': 'يساراً بحدة', 'sharp right': 'يميناً بحدة', 'slight left': 'قليلاً يساراً', 'slight right': 'قليلاً يميناً' };
+function stepText(step) {
+  const { type, modifier, exit } = step.maneuver;
+  const road = step.name ? ` على ${step.name}` : '';
+  const turn = TURN_AR[modifier] || '';
+  if (type === 'depart') return `ابدأ${road}`;
+  if (type === 'arrive') return 'وصلت إلى وجهتك';
+  if (type === 'roundabout' || type === 'rotary') return `ادخل الدوار${exit ? ` واخرج من المخرج ${nf.format(exit)}` : ''}`;
+  if (modifier === 'uturn') return `استدر للخلف${road}`;
+  if (type === 'fork') return `اسلك ${turn || 'الطريق'}${road}`;
+  if (type === 'merge') return `اندمج ${turn || 'للأمام'}${road}`;
+  if (modifier === 'straight' || type === 'new name' || type === 'continue') return `واصل${modifier === 'straight' ? ' للأمام' : ''}${road}`;
+  return `${turn ? `انعطف ${turn}` : 'واصل'}${road}`;
+}
+
+/* ---------- network (OpenStreetMap / OSRM) ---------- */
+const NOM = 'https://nominatim.openstreetmap.org';
+// One OSRM service per travel mode (the demo server routes all modes by car).
+const ROUTERS = { driving: 'routed-car', walking: 'routed-foot', cycling: 'routed-bike' };
+
+async function getJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+const searchPlaces = q => getJSON(`${NOM}/search?format=json&addressdetails=1&limit=6&accept-language=ar&q=${encodeURIComponent(q)}`);
+const reversePlace = (lat, lng) => getJSON(`${NOM}/reverse?format=json&addressdetails=1&zoom=18&accept-language=ar&lat=${lat}&lon=${lng}`);
+const toItem = r => ({
+  lat: +r.lat,
+  lng: +r.lon,
+  name: r.name || r.display_name.split(',')[0].trim(),
+  address: r.display_name,
+});
+function placeName(d) {
+  const a = d.address || {};
+  return d.name || a.road || a.neighbourhood || a.suburb || a.city || 'موقع محدد';
+}
+
+/* ---------- state ---------- */
+const DEFAULT_VIEW = { lat: 24.7136, lng: 46.6753, zoom: 12 }; // Riyadh
+const state = {
+  view: 'home',
+  lastView: null,
+  place: null,
+  placeSeq: 0,
+  saved: store.get('maps.saved', []),
+  recent: store.get('maps.recent', []),
+  route: { from: null, to: null, mode: 'driving', steps: [], html: '' },
+};
+
+/* ---------- map ---------- */
+function readHash() {
+  const [lat, lng, zoom] = location.hash.slice(1).split(',').map(Number);
+  const ok = [lat, lng, zoom].every(Number.isFinite) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && zoom >= 1 && zoom <= 19;
+  return ok ? { lat, lng, zoom } : null;
+}
+const start = readHash() || DEFAULT_VIEW;
+const map = L.map('map', { zoomControl: false, worldCopyJump: true }).setView([start.lat, start.lng], start.zoom);
+
+L.control.zoom({ position: 'topleft', zoomInTitle: 'تكبير', zoomOutTitle: 'تصغير' }).addTo(map);
+L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);
+
+const LAYERS = {
+  street: { label: 'الخريطة', make: () => L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }) },
+  satellite: {
+    label: 'القمر الصناعي',
+    make: () => L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery &copy; Esri' }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+    ]),
+  },
+  dark: { label: 'ليلي', make: () => L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: '&copy; OpenStreetMap &copy; CARTO' }) },
+  topo: { label: 'تضاريس', make: () => L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: '&copy; OpenTopoMap' }) },
+};
+let baseLayer = null;
+function setLayer(key) {
+  if (!LAYERS[key]) key = 'street';
+  if (baseLayer) map.removeLayer(baseLayer);
+  baseLayer = LAYERS[key].make().addTo(map);
+  document.querySelectorAll('[data-layer]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.layer === key)));
+  store.set('maps.layer', key);
+}
+
+function addControl(position, html, onClick) {
+  const Ctl = L.Control.extend({
+    options: { position },
+    onAdd() {
+      const el = L.DomUtil.create('div', 'ctl');
+      el.innerHTML = html;
+      L.DomEvent.disableClickPropagation(el);
+      L.DomEvent.disableScrollPropagation(el);
+      el.addEventListener('click', onClick);
+      return el;
+    },
+  });
+  return new Ctl().addTo(map);
+}
+addControl('topleft',
+  `<div class="bar"><button type="button" title="موقعي" aria-label="موقعي" data-tool="locate">${ICON.locate}</button></div>`,
+  e => { if (e.target.closest('[data-tool="locate"]')) locate(); });
+addControl('topright',
+  `<div class="layers" role="group" aria-label="نوع الخريطة">${Object.entries(LAYERS).map(([k, v]) => `<button type="button" data-layer="${k}" aria-pressed="false">${v.label}</button>`).join('')}</div>`,
+  e => { const b = e.target.closest('[data-layer]'); if (b) setLayer(b.dataset.layer); });
+addControl('bottomright', '<div class="coords" id="coords">—</div>', () => {});
+const coordsEl = $('#coords');
+
+map.on('mousemove', e => { coordsEl.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}  ·  z${map.getZoom()}`; });
+map.on('moveend', () => {
+  const c = map.getCenter();
+  history.replaceState(null, '', `#${c.lat.toFixed(5)},${c.lng.toFixed(5)},${map.getZoom()}`);
+});
+map.on('click', e => {
+  if (state.view === 'route') return addRoutePoint(e.latlng);
+  selectPoint({ lat: e.latlng.lat, lng: e.latlng.lng, auto: true });
+});
+
+/* ---------- markers ---------- */
+const markers = {};
+let routeLine = null, meMarker = null, meCircle = null;
+
+function pinIcon(color, label = '') {
+  const dot = label
+    ? `<circle cx="15" cy="15" r="8" fill="#fff"/><text x="15" y="19.5" text-anchor="middle" font-size="11" font-weight="700" font-family="sans-serif" fill="${color}">${label}</text>`
+    : '<circle cx="15" cy="15" r="5" fill="#fff"/>';
+  return L.divIcon({
+    className: 'pin',
+    iconSize: [30, 40],
+    iconAnchor: [15, 40],
+    html: `<svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true"><path d="M15 1C7.3 1 1 7.3 1 15c0 10.2 14 24 14 24s14-13.8 14-24C29 7.3 22.7 1 15 1z" fill="${color}" stroke="#fff" stroke-width="2"/>${dot}</svg>`,
+  });
+}
+function setMarker(key, ll, icon) {
+  if (markers[key]) return markers[key].setLatLng(ll).setIcon(icon);
+  markers[key] = L.marker(ll, { icon, interactive: false, keyboard: false }).addTo(map);
+  return markers[key];
+}
+function dropMarker(key) {
+  if (markers[key]) { map.removeLayer(markers[key]); delete markers[key]; }
+}
+function syncRouteMarkers() {
+  const { from, to } = state.route;
+  if (from) setMarker('from', [from.lat, from.lng], pinIcon('#188038', 'A')); else dropMarker('from');
+  if (to) setMarker('to', [to.lat, to.lng], pinIcon('#1a73e8', 'B')); else dropMarker('to');
+}
+function dropRoute() {
+  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+}
+function showMe(ll, acc) {
+  if (!meMarker) {
+    meCircle = L.circle(ll, { radius: acc, color: '#4285f4', weight: 1, fillColor: '#4285f4', fillOpacity: 0.12, interactive: false }).addTo(map);
+    meMarker = L.marker(ll, {
+      icon: L.divIcon({ className: '', html: '<div class="me"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }),
+      interactive: false,
+      keyboard: false,
+    }).addTo(map);
+  } else {
+    meCircle.setLatLng(ll).setRadius(acc);
+    meMarker.setLatLng(ll);
+  }
+}
+
+/* ---------- geolocation & clipboard ---------- */
+function getPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('unsupported'));
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+  });
+}
+async function locate() {
+  try {
+    const { coords } = await getPosition();
+    const ll = [coords.latitude, coords.longitude];
+    showMe(ll, coords.accuracy);
+    map.flyTo(ll, Math.max(map.getZoom(), 16));
+    return { lat: ll[0], lng: ll[1] };
+  } catch (err) {
+    toast(err.code === 1 ? 'لم تُمنح صلاحية الموقع' : 'تعذّر تحديد موقعك');
+    return null;
+  }
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('تم النسخ'); }
+  catch { toast('تعذّر النسخ'); }
+}
+let toastTimer;
+function toast(msg) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ---------- places ---------- */
+async function selectPoint(p) {
+  const seq = ++state.placeSeq;
+  state.place = { lat: p.lat, lng: p.lng, name: p.name || '', address: p.address || '', loading: !p.address };
+  setMarker('place', [p.lat, p.lng], pinIcon('#d93025'));
+  showView('place');
+  if (p.address) return;
+  try {
+    const d = await reversePlace(p.lat, p.lng);
+    if (seq !== state.placeSeq) return;
+    state.place.name ||= placeName(d);
+    state.place.address = d.display_name || '';
+  } catch {
+    if (seq !== state.placeSeq) return;
+    state.place.name ||= 'موقع محدد';
+  }
+  state.place.loading = false;
+  if (state.view === 'place') render();
+}
+function goTo(it) {
+  map.flyTo([it.lat, it.lng], Math.max(map.getZoom(), 16), { duration: 0.8 });
+  selectPoint(it);
+}
+function placePoint() {
+  const p = state.place;
+  return { lat: p.lat, lng: p.lng, name: p.name || 'الموقع المحدد', address: p.address };
+}
+function pushRecent(it) {
+  state.recent = [it, ...state.recent.filter(x => !sameSpot(x, it))].slice(0, 8);
+  store.set('maps.recent', state.recent);
+}
+function toggleSave() {
+  const p = state.place;
+  if (!p) return;
+  const idx = state.saved.findIndex(s => sameSpot(s, p));
+  if (idx >= 0) {
+    state.saved.splice(idx, 1);
+    toast('أُزيل من المحفوظات');
+  } else {
+    state.saved.unshift({ id: Date.now().toString(36), name: p.name || 'موقع محدد', address: p.address, lat: p.lat, lng: p.lng });
+    toast('تم الحفظ');
+  }
+  store.set('maps.saved', state.saved);
+  render();
+}
+async function shareLink() {
+  const p = state.place;
+  if (!p) return;
+  const base = location.href.split('#')[0];
+  const url = `${base}#${p.lat.toFixed(5)},${p.lng.toFixed(5)},${Math.max(map.getZoom(), 16)}`;
+  const text = `${p.name} — ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: p.name, text, url }); return; }
+    catch (err) { if (err.name === 'AbortError') return; }
+  }
+  copyText(`${text}\n${url}`);
+}
+
+/* ---------- route ---------- */
+function setRoutePoint(key, p) {
+  state.route[key] = p;
+  const input = $(key === 'from' ? '#rFrom' : '#rTo');
+  if (input) input.value = p?.name ?? '';
+  syncRouteMarkers();
+  if (p?.auto) resolveRouteName(key, p);
+  if (state.route.from && state.route.to) calcRoute();
+  else state.route.html = '';
+}
+async function resolveRouteName(key, p) {
+  try {
+    const d = await reversePlace(p.lat, p.lng);
+    if (state.route[key] !== p) return;
+    p.name = placeName(d);
+    p.address = d.display_name || '';
+    const input = $(key === 'from' ? '#rFrom' : '#rTo');
+    if (input) input.value = p.name;
+  } catch { /* keep the coordinates as the name */ }
+}
+function addRoutePoint({ lat, lng }) {
+  const key = state.route.from ? 'to' : 'from';
+  setRoutePoint(key, { lat, lng, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, address: '', auto: true });
+}
+function drawRoute(coords) {
+  dropRoute();
+  routeLine = L.polyline(coords.map(([lng, lat]) => [lat, lng]), { color: '#1a73e8', weight: 6, opacity: 0.9 }).addTo(map);
+  const bottom = window.innerWidth <= 760 ? window.innerHeight * 0.46 + 24 : 40;
+  map.fitBounds(routeLine.getBounds(), { paddingTopLeft: [40, 40], paddingBottomRight: [40, bottom] });
+}
+async function calcRoute() {
+  const { from, to, mode } = state.route;
+  if (!from || !to) return toast('حدّد نقطتي البداية والنهاية');
+  const show = html => {
+    state.route.html = html;
+    const el = $('#routeResult');
+    if (el) el.innerHTML = html;
+  };
+  show('<p class="muted pad">جارٍ حساب المسار…</p>');
+  try {
+    const url = `https://routing.openstreetmap.de/${ROUTERS[mode]}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true&alternatives=false`;
+    const data = await getJSON(url);
+    if (data.code !== 'Ok' || !data.routes?.length) throw new Error(data.code || 'NoRoute');
+    const route = data.routes[0];
+    state.route.steps = route.legs[0].steps;
+    drawRoute(route.geometry.coordinates);
+    show(routeSummaryHTML(route));
+  } catch (err) {
+    show(`<p class="muted pad">تعذّر حساب المسار (${esc(err.message)}). جرّب وسيلة تنقل أخرى أو نقطة أقرب إلى طريق.</p>`);
+  }
+}
+function routeSummaryHTML(route) {
+  const list = state.route.steps.map((s, i) => `
+    <li><button type="button" class="step" data-act="step" data-i="${i}">
+      <span class="n">${i + 1}</span>
+      <span class="grow"><span class="t">${esc(stepText(s))}</span>${s.distance ? `<span class="s">${fmtDist(s.distance)}</span>` : ''}</span>
+    </button></li>`).join('');
+  return `
+    <div class="route-sum">
+      <span class="time">${fmtDur(route.duration)}</span>
+      <span class="muted">${fmtDist(route.distance)} · الوصول ${fmtClock(route.duration)}</span>
+    </div>
+    <ol class="steps">${list}</ol>`;
+}
+function clearRoute() {
+  state.route = { from: null, to: null, mode: state.route.mode, steps: [], html: '' };
+  dropMarker('from');
+  dropMarker('to');
+  dropRoute();
+  render();
+}
+
+/* ---------- views ---------- */
+function showView(view) {
+  state.view = view;
+  render();
+}
+function subhead(title) {
+  return `<div class="subhead"><button type="button" class="icon-btn" data-act="home" aria-label="رجوع">→</button><h2>${esc(title)}</h2></div>`;
+}
+function savedItem(p) {
+  return `
+    <div class="item-row">
+      <button type="button" class="item" data-act="open-saved" data-id="${esc(p.id)}">
+        <span class="badge">${ICON.pin}</span>
+        <span class="grow"><span class="t">${esc(p.name)}</span><span class="s">${esc(p.address || `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`)}</span></span>
+      </button>
+      <button type="button" class="icon-btn" data-act="remove-saved" data-id="${esc(p.id)}" aria-label="حذف ${esc(p.name)}">${ICON.trash}</button>
+    </div>`;
+}
+function homeHTML() {
+  const top = state.saved.slice(0, 4);
+  return `
+    <h2 class="title">ابحث عن مكان</h2>
+    <p class="muted">ابحث بالاسم أو العنوان، أو اضغط على أي نقطة في الخريطة لعرض عنوانها وإحداثياتها بدقة، أو خطط لمسار بين نقطتين.</p>
+    <div class="actions">
+      <button type="button" class="btn" data-act="route">${ICON.route}<span>الاتجاهات</span></button>
+      <button type="button" class="btn light" data-act="saved">${ICON.saved}<span>المحفوظات</span></button>
+    </div>
+    ${top.length ? `<div class="section">آخر المحفوظات</div>${top.map(savedItem).join('')}` : ''}`;
+}
+function placeHTML() {
+  const p = state.place;
+  if (!p) return homeHTML();
+  const saved = state.saved.some(s => sameSpot(s, p));
+  const addr = p.loading ? 'جارٍ جلب العنوان…' : p.address || 'لا يتوفر عنوان لهذا الموقع';
+  return `
+    ${subhead('تفاصيل الموقع')}
+    <h2 class="card-title">${esc(p.name || 'موقع محدد')}</h2>
+    <p class="muted">${esc(addr)}</p>
+    <div class="actions">
+      <button type="button" class="btn" data-act="to-here">${ICON.route}<span>الاتجاهات</span></button>
+      <button type="button" class="btn light" data-act="from-here">من هنا</button>
+      <button type="button" class="btn light" data-act="save">${ICON.saved}<span>${saved ? 'إزالة من المحفوظات' : 'حفظ'}</span></button>
+      <button type="button" class="btn light" data-act="copy">${ICON.copy}<span>نسخ الإحداثيات</span></button>
+      <button type="button" class="btn light" data-act="share">${ICON.share}<span>مشاركة</span></button>
+    </div>
+    <div class="rows">
+      <div class="row"><span class="k">خط العرض</span><span class="v num">${p.lat.toFixed(6)}</span></div>
+      <div class="row"><span class="k">خط الطول</span><span class="v num">${p.lng.toFixed(6)}</span></div>
+      <div class="row"><span class="k">بالدرجات</span><span class="v num">${dms(p.lat, 'N', 'S')}<br>${dms(p.lng, 'E', 'W')}</span></div>
+      <div class="row"><span class="k">الخريطة</span><span class="v"><a href="https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=17/${p.lat}/${p.lng}" target="_blank" rel="noopener">فتح في OpenStreetMap</a></span></div>
+    </div>`;
+}
+function routeHTML() {
+  const r = state.route;
+  const modes = [['driving', 'سيارة'], ['walking', 'مشياً'], ['cycling', 'دراجة']];
+  return `
+    ${subhead('الاتجاهات')}
+    <div class="route-form">
+      <span class="letter a" aria-hidden="true">A</span>
+      <div class="search">
+        <div class="box">
+          <input id="rFrom" type="text" placeholder="نقطة البداية" autocomplete="off" role="combobox" aria-autocomplete="list" aria-label="نقطة البداية" value="${esc(r.from?.name)}">
+          <button type="button" class="icon-btn sm" data-act="here-from" aria-label="استخدام موقعي الحالي" title="موقعي الحالي"><span data-icon="locate"></span></button>
+        </div>
+        <ul class="suggest" role="listbox" hidden></ul>
+      </div>
+      <span class="letter b" aria-hidden="true">B</span>
+      <div class="search">
+        <div class="box">
+          <input id="rTo" type="text" placeholder="نقطة الوصول" autocomplete="off" role="combobox" aria-autocomplete="list" aria-label="نقطة الوصول" value="${esc(r.to?.name)}">
+        </div>
+        <ul class="suggest" role="listbox" hidden></ul>
+      </div>
+    </div>
+    <div class="chips-row">
+      <div class="chips" role="group" aria-label="وسيلة التنقل">
+        ${modes.map(([m, label]) => `<button type="button" class="chip" data-act="mode" data-mode="${m}" aria-pressed="${r.mode === m}">${label}</button>`).join('')}
+      </div>
+      <button type="button" class="icon-btn" data-act="swap" aria-label="تبديل نقطتي البداية والنهاية" title="تبديل">${ICON.swap}</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn" data-act="route-go">ابحث عن المسار</button>
+      <button type="button" class="btn light" data-act="route-clear">مسح</button>
+    </div>
+    <div id="routeResult">${r.html || '<p class="muted pad">اختر نقطتين، أو اضغط على الخريطة لتحديد النقطة التالية.</p>'}</div>`;
+}
+function savedHTML() {
+  return subhead('المحفوظات') + (state.saved.length
+    ? state.saved.map(savedItem).join('')
+    : '<p class="muted pad">لا توجد أماكن محفوظة بعد. افتح أي موقع واضغط «حفظ».</p>');
+}
+
+function render() {
+  const c = $('#content');
+  const keep = state.lastView === state.view ? c.scrollTop : 0;
+  const views = { home: homeHTML, place: placeHTML, route: routeHTML, saved: savedHTML };
+  c.innerHTML = views[state.view]();
+  c.scrollTop = keep;
+  state.lastView = state.view;
+  if (state.view === 'route') {
+    attachSearch($('#rFrom'), it => setRoutePoint('from', { ...it }));
+    attachSearch($('#rTo'), it => setRoutePoint('to', { ...it }));
+  }
+}
+
+/* ---------- actions (event delegation) ---------- */
+const actions = {
+  home() {
+    if (state.view === 'place') { state.place = null; dropMarker('place'); }
+    showView('home');
+  },
+  route() { showView('route'); },
+  saved() { showView('saved'); },
+  save() { toggleSave(); },
+  copy() { if (state.place) copyText(`${state.place.lat.toFixed(6)}, ${state.place.lng.toFixed(6)}`); },
+  share() { shareLink(); },
+  'to-here'() { if (!state.place) return; showView('route'); setRoutePoint('to', placePoint()); },
+  'from-here'() { if (!state.place) return; showView('route'); setRoutePoint('from', placePoint()); },
+  'open-saved'(el) {
+    const p = state.saved.find(s => s.id === el.dataset.id);
+    if (p) goTo(p);
+  },
+  'remove-saved'(el) {
+    state.saved = state.saved.filter(s => s.id !== el.dataset.id);
+    store.set('maps.saved', state.saved);
+    render();
+  },
+  async 'here-from'() {
+    const me = await locate();
+    if (me) setRoutePoint('from', { ...me, name: 'موقعي الحالي', address: 'الموقع الحالي من الجهاز' });
+  },
+  swap() {
+    [state.route.from, state.route.to] = [state.route.to, state.route.from];
+    render();
+    syncRouteMarkers();
+    if (state.route.from && state.route.to) calcRoute();
+  },
+  mode(el) {
+    state.route.mode = el.dataset.mode;
+    render();
+    if (state.route.from && state.route.to) calcRoute();
+  },
+  'route-go'() { calcRoute(); },
+  'route-clear'() { clearRoute(); },
+  step(el) {
+    const s = state.route.steps[+el.dataset.i];
+    if (s) map.flyTo([s.maneuver.location[1], s.maneuver.location[0]], 17);
+  },
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  const fn = el && actions[el.dataset.act];
+  if (fn) fn(el);
+});
+
+/* ---------- search with suggestions ---------- */
+function attachSearch(input, onPick) {
+  const wrap = input.closest('.search');
+  const list = wrap.querySelector('.suggest');
+  const clr = wrap.querySelector('[data-clear]');
+  let items = [], active = -1, timer, seq = 0;
+
+  const close = () => { list.hidden = true; list.innerHTML = ''; items = []; active = -1; };
+  const paint = (rows, heading, emptyMsg) => {
+    items = rows;
+    active = -1;
+    let html = heading ? `<li class="h">${esc(heading)}</li>` : '';
+    html += rows.length
+      ? rows.map((it, i) => `<li role="option" data-i="${i}" aria-selected="false"><span class="t">${esc(it.name)}</span><span class="s">${esc(it.address)}</span></li>`).join('')
+      : `<li class="h">${esc(emptyMsg)}</li>`;
+    list.innerHTML = html;
+    list.hidden = false;
+  };
+  const showRecent = () => (state.recent.length ? paint(state.recent, 'عمليات البحث الأخيرة', '') : close());
+  const move = d => {
+    active = (active + d + items.length) % items.length;
+    list.querySelectorAll('li[data-i]').forEach(li => li.setAttribute('aria-selected', String(+li.dataset.i === active)));
+  };
+  const run = async q => {
+    const mine = ++seq;
+    paint([], '', 'جارٍ البحث…');
+    try {
+      const rows = (await searchPlaces(q)).map(toItem);
+      if (mine === seq) paint(rows, '', 'لا توجد نتائج');
+      return rows;
+    } catch {
+      if (mine === seq) paint([], '', 'تعذّر البحث، تحقق من الاتصال');
+      return [];
+    }
+  };
+  const pick = it => {
+    if (!it) return;
+    input.value = it.name;
+    close();
+    if (clr) clr.hidden = false;
+    pushRecent(it);
+    onPick(it);
+  };
+
+  input.addEventListener('input', () => {
+    if (clr) clr.hidden = !input.value;
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (!q) return showRecent();
+    if (q.length < 2) return close();
+    timer = setTimeout(() => run(q), 350);
+  });
+  input.addEventListener('focus', () => { if (!input.value.trim()) showRecent(); });
+  input.addEventListener('blur', () => setTimeout(close, 120));
+  input.addEventListener('keydown', async e => {
+    const open = !list.hidden && items.length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (!open) return;
+      e.preventDefault();
+      move(e.key === 'ArrowDown' ? 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (open) return pick(items[active >= 0 ? active : 0]);
+      const q = input.value.trim();
+      if (q.length >= 2) pick((await run(q))[0]);
+    } else if (e.key === 'Escape') {
+      close();
+    }
+  });
+  list.addEventListener('mousedown', e => e.preventDefault());
+  list.addEventListener('click', e => {
+    const li = e.target.closest('li[data-i]');
+    if (li) pick(items[+li.dataset.i]);
+  });
+  if (clr) clr.addEventListener('click', () => { input.value = ''; clr.hidden = true; close(); input.focus(); });
+}
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown', e => {
+  const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
+  if (e.key === '/' && !typing) { e.preventDefault(); $('#q').focus(); }
+  if (e.key === 'Escape' && typing) document.activeElement.blur();
+});
+
+/* ---------- init ---------- */
+setLayer(store.get('maps.layer', 'street'));
+attachSearch($('#q'), goTo);
+render();
+</script>
+</body>
+</html>
