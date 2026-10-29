@@ -15,7 +15,7 @@
 ## التشغيل (مرة وحدة)
 
 1. **التطبيق:** في GitHub ← Settings ← Pages ← Source: *Deploy from a branch* ← الفرع `claude/body-reshape-12-week-dld8z9` والمجلد `/ (root)`. يصير الرابط `https://sul505.github.io/505/body-tracker/`. افتحه في سفاري ← مشاركة ← «إضافة إلى الشاشة الرئيسية».
-2. **السيرفر:** مشروع Apps Script فيه `Code.gs` ← نشر ← عملية نشر جديدة ← تطبيق ويب، التنفيذ باسم «أنا»، الوصول «أي شخص». انسخ رابط `/exec` والصقه في تبويب «الربط» داخل التطبيق.
+2. **السيرفر:** افتح [مشروع Apps Script جديد](https://script.google.com/home/projects/create)، والصق فيه [ملف السيرفر](https://raw.githubusercontent.com/sul505/505/claude/body-reshape-12-week-dld8z9/body-tracker/server/Code.gs) كامل ← نشر ← عملية نشر جديدة ← تطبيق ويب، التنفيذ باسم «أنا»، الوصول «أي شخص». انسخ رابط `/exec` والصقه في تبويب «الربط» داخل التطبيق.
 3. **سيري والتنبيهات:** الخطوات كاملة مع الروابط الجاهزة للنسخ في تبويب «الربط».
 
 ## روابط السيرفر
