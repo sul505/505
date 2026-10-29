@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>متتبع شد الجسم</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mu:#667085;--ac:#0f766e;--ac2:#e6f4f2;--bd:#e4e7ec;--good:#15803d;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1117;--card:#161b22;--tx:#e6edf3;--mu:#8b949e;--ac:#2dd4bf;--ac2:#13302d;--bd:#30363d;--good:#4ade80;--bad:#f87171}}
+:root[data-theme="dark"]{--bg:#0d1117;--card:#161b22;--tx:#e6edf3;--mu:#8b949e;--ac:#2dd4bf;--ac2:#13302d;--bd:#30363d;--good:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;padding-bottom:76px}
+header{padding:18px 16px 6px;max-width:720px;margin:auto}
+h1{font-size:20px;margin:0}h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mu);font-size:13px}
+main{max-width:720px;margin:auto;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--ac2);border-radius:12px;padding:10px}
+.kpi b{display:block;font-size:20px}.kpi span{font-size:12px;color:var(--mu)}
+label{font-size:13px;color:var(--mu);display:block;margin-bottom:4px}
+input,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:16px}
+button{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:11px 14px;font-size:15px;cursor:pointer}
+button.ghost{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.row>*{flex:1;min-width:110px}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:7px 4px;border-bottom:1px solid var(--bd);text-align:right}
+.del{background:none;color:var(--bad);padding:2px 6px}
+nav{position:fixed;bottom:0;inset-inline:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:space-around;padding:6px 0 max(6px,env(safe-area-inset-bottom))}
+nav button{background:none;color:var(--mu);font-size:12px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button.on{color:var(--ac);font-weight:700}nav i{font-style:normal;font-size:20px}
+.tab{display:none}.tab.on{display:block}
+.ins{padding:9px 0;border-bottom:1px dashed var(--bd);font-size:14px;line-height:1.6}.ins:last-child{border:0}
+.good{color:var(--good)}.bad{color:var(--bad)}
+svg{width:100%;height:auto;display:block}
+details{margin:6px 0}summary{cursor:pointer;font-weight:600;padding:6px 0}
+ul{margin:4px 0;padding-inline-start:20px;font-size:14px;line-height:1.8}
+</style>
+</head>
+<body>
+<header><h1>💪 متتبع شد الجسم — 12 أسبوع</h1><div class="sub" id="weekLbl"></div></header>
+<main>
+
+<section class="tab on" id="t-home">
+  <div class="card"><h2>ملخصك</h2><div class="grid" id="kpis"></div></div>
+  <div class="card"><h2>تحليل التطور</h2><div id="insights"></div></div>
+  <div class="card"><h2>متوسط الوزن الأسبوعي</h2><div id="chW"></div></div>
+  <div class="card"><h2>محيط الخصر</h2><div id="chWa"></div></div>
+</section>
+
+<section class="tab" id="t-body">
+  <div class="card"><h2>تسجيل الوزن والقياسات</h2>
+    <div class="row">
+      <div><label>التاريخ</label><input type="date" id="bDate"></div>
+      <div><label>الوزن (كجم)</label><input type="number" step="0.1" id="bW" inputmode="decimal"></div>
+      <div><label>الخصر (سم)</label><input type="number" step="0.1" id="bWa" inputmode="decimal"></div>
+      <div><label>الصدر (سم)</label><input type="number" step="0.1" id="bCh" inputmode="decimal"></div>
+      <div><label>الذراع (سم)</label><input type="number" step="0.1" id="bAr" inputmode="decimal"></div>
+    </div>
+    <p class="sub">اكتب اللي عندك بس — الخصر والصدر والذراع اختيارية (مرة بالأسبوع تكفي).</p>
+    <button onclick="addBody()">حفظ</button>
+  </div>
+  <div class="card"><h2>السجل</h2><table><thead><tr><th>التاريخ</th><th>وزن</th><th>خصر</th><th>صدر</th><th>ذراع</th><th></th></tr></thead><tbody id="bList"></tbody></table></div>
+</section>
+
+<section class="tab" id="t-gym">
+  <div class="card"><h2>تسجيل تمرين</h2>
+    <div class="row">
+      <div><label>التاريخ</label><input type="date" id="gDate"></div>
+      <div><label>اليوم</label><select id="gDay" onchange="fillEx()"></select></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label>التمرين / الآلة</label><select id="gEx"></select></div>
+      <div><label>الوزن (كجم)</label><input type="number" step="0.5" id="gKg" inputmode="decimal"></div>
+      <div><label>التكرارات</label><input type="number" id="gReps" inputmode="numeric"></div>
+      <div><label>المجموعات</label><input type="number" id="gSets" value="3" inputmode="numeric"></div>
+    </div>
+    <p class="sub" id="gHint"></p>
+    <button onclick="addGym()">حفظ المجموعة</button>
+  </div>
+  <div class="card"><h2>أفضل أداء لكل تمرين</h2><table><thead><tr><th>التمرين</th><th>أول مرة</th><th>الآن</th><th>التغير</th></tr></thead><tbody id="prList"></tbody></table></div>
+  <div class="card"><h2>آخر التسجيلات</h2><table><tbody id="gList"></tbody></table></div>
+</section>
+
+<section class="tab" id="t-plan">
+  <div class="card"><h2>بياناتك</h2>
+    <div class="row">
+      <div><label>الطول (سم)</label><input type="number" id="pH"></div>
+      <div><label>العمر</label><input type="number" id="pAge"></div>
+      <div><label>النشاط اليومي</label><select id="pAct"><option value="1.4">قليل</option><option value="1.55" selected>متوسط</option><option value="1.7">مرتفع</option></select></div>
+      <div><label>تاريخ بداية الخطة</label><input type="date" id="pStart"></div>
+    </div>
+    <button onclick="saveProfile()" style="margin-top:8px">حفظ</button>
+    <div class="grid" id="macros" style="margin-top:12px"></div>
+  </div>
+  <div class="card"><h2>خطة التمرين</h2><div id="planList"></div>
+    <p class="sub">اترك 1–2 تكرار قبل الفشل • راحة 2–3 د للمركبة و60–120 ث للعزل • إذا وصلت أعلى التكرارات بتكنيك صحيح زد الوزن.</p></div>
+  <div class="card"><h2>نسخ احتياطي</h2>
+    <div class="row"><button class="ghost" onclick="exportData()">تصدير البيانات</button>
+    <label class="ghost" style="text-align:center;border:1px solid var(--bd);border-radius:10px;padding:11px;color:var(--ac);cursor:pointer">استيراد<input type="file" accept=".json" onchange="importData(this)" hidden></label></div>
+    <p class="sub">البيانات محفوظة على جهازك فقط. صدّرها بين فترة وفترة.</p></div>
+</section>
+</main>
+
+<nav>
+  <button class="on" data-t="home"><i>📊</i>التحليل</button>
+  <button data-t="body"><i>⚖️</i>الجسم</button>
+  <button data-t="gym"><i>🏋️</i>النادي</button>
+  <button data-t="plan"><i>📋</i>الخطة</button>
+</nav>
+
+<script>
+const PLAN={
+ "اليوم 1: صدر وكتف وترايسبس":[["بنش برس","3×6–10"],["بنش مائل بالدمبل","3×8–12"],["تفتيح بالكابل","2×12–15"],["ضغط كتف","3×8–12"],["رفرفة جانبية","3×12–20"],["ترايسبس بالكابل","3×10–15"]],
+ "اليوم 2: ظهر وبايسبس":[["سحب علوي","3×8–12"],["تجديف جالس","3×8–12"],["تجديف مدعوم بالصدر","2×8–12"],["رفرفة خلفية","3×12–15"],["بايسبس بالدمبل","3×10–12"],["Hammer Curl","2×10–15"]],
+ "اليوم 3: أرجل وبطن":[["Leg Press / سكوات","3×6–12"],["Romanian Deadlift","3×8–10"],["Leg Curl","3×10–15"],["Leg Extension","2×10–15"],["رفع السمانة","3×12–15"],["رفع الركبتين للبطن","3×10–15"],["بلانك","3 جولات"]],
+ "اليوم 4: علوي كامل":[["بنش مائل بالدمبل","3×8–12"],["سحب علوي","3×8–12"],["ضغط صدر بالجهاز","2×10–12"],["تجديف بالكابل","3×8–12"],["رفرفة جانبية","3×12–20"],["بايسبس بالدمبل","2×10–15"],["ترايسبس بالكابل","2×10–15"]]
+};
+const K='bodyTracker.v1';
+const today=()=>new Date().toISOString().slice(0,10);
+let D;try{D=JSON.parse(localStorage.getItem(K))}catch(e){}
+D=D||{profile:{h:178,age:'',act:1.55,start:today()},body:[{d:today(),w:72}],gym:[]};
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(D))}catch(e){}};
+const $=id=>document.getElementById(id);
+const f1=n=>n==null||isNaN(n)?'—':(+n).toFixed(1).replace(/\.0$/,'');
+const sgn=n=>(n>0?'+':'')+f1(n);
+const days=(a,b)=>(new Date(b)-new Date(a))/864e5;
+const e1rm=(kg,r)=>kg*(1+r/30);
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('nav button,.tab').forEach(x=>x.classList.remove('on'));
+ b.classList.add('on');$('t-'+b.dataset.t).classList.add('on');scrollTo(0,0)});
+
+function addBody(){
+ const e={d:$('bDate').value||today()};
+ for(const [id,k] of [['bW','w'],['bWa','wa'],['bCh','ch'],['bAr','ar']]){const v=parseFloat($(id).value);if(!isNaN(v))e[k]=v;$(id).value=''}
+ if(Object.keys(e).length<2)return alert('اكتب قيمة واحدة على الأقل');
+ D.body.push(e);D.body.sort((a,b)=>a.d<b.d?-1:1);save();render();
+}
+function addGym(){
+ const kg=parseFloat($('gKg').value),r=parseInt($('gReps').value);
+ if(isNaN(kg)||isNaN(r))return alert('اكتب الوزن والتكرارات');
+ D.gym.push({d:$('gDate').value||today(),ex:$('gEx').value,kg,r,s:parseInt($('gSets').value)||1});
+ D.gym.sort((a,b)=>a.d<b.d?-1:1);$('gKg').value='';$('gReps').value='';save();render();
+}
+function del(t,i){if(confirm('حذف؟')){D[t].splice(i,1);save();render()}}
+function fillEx(){
+ const list=PLAN[$('gDay').value];$('gEx').innerHTML=list.map(([n,s])=>`<option>${n}</option>`).join('');
+ $('gEx').onchange=hint;hint();
+}
+function hint(){
+ const ex=$('gEx').value,last=D.gym.filter(g=>g.ex==ex).pop();
+ const tgt=Object.values(PLAN).flat().find(x=>x[0]==ex)?.[1]||'';
+ const top=parseInt((tgt.match(/–(\d+)/)||[])[1]);
+ let h=`الهدف: ${tgt}`;
+ if(last){h+=` • آخر مرة: ${last.kg} كجم × ${last.r}`;if(top&&last.r>=top)h+=' ← وصلت أعلى التكرارات، زد الوزن 2.5 كجم 👆'}
+ $('gHint').textContent=h;
+}
+function saveProfile(){D.profile={h:+$('pH').value||178,age:+$('pAge').value||'',act:+$('pAct').value,start:$('pStart').value||today()};save();render()}
+
+function weekly(key){
+ const m={};D.body.filter(b=>b[key]!=null).forEach(b=>{const w=Math.floor(days(D.profile.start,b.d)/7)+1;(m[w]=m[w]||[]).push(b[key])});
+ return Object.keys(m).map(Number).sort((a,b)=>a-b).map(w=>({w,v:m[w].reduce((a,b)=>a+b)/m[w].length}));
+}
+function chart(el,pts,unit){
+ if(pts.length<2){$(el).innerHTML='<p class="sub">يحتاج أسبوعين من التسجيل على الأقل لعرض الرسم.</p>';return}
+ const W=600,H=200,p=34,vs=pts.map(x=>x.v),mn=Math.min(...vs)-.5,mx=Math.max(...vs)+.5;
+ const X=i=>p+i*(W-2*p)/(pts.length-1),Y=v=>H-p-(v-mn)/(mx-mn)*(H-2*p);
+ const path=pts.map((q,i)=>(i?'L':'M')+X(i)+','+Y(q.v)).join('');
+ $(el).innerHTML=`<svg viewBox="0 0 ${W} ${H}" direction="ltr"><path d="${path}" fill="none" stroke="var(--ac)" stroke-width="3"/>`+
+ pts.map((q,i)=>`<circle cx="${X(i)}" cy="${Y(q.v)}" r="4" fill="var(--ac)"/><text x="${X(i)}" y="${Y(q.v)-9}" font-size="12" text-anchor="middle" fill="var(--tx)">${f1(q.v)}</text><text x="${X(i)}" y="${H-10}" font-size="11" text-anchor="middle" fill="var(--mu)">أ${q.w}</text>`).join('')+`</svg>`;
+}
+function bestByEx(){
+ const m={};D.gym.forEach(g=>{const v=e1rm(g.kg,g.r);(m[g.ex]=m[g.ex]||{first:g,best:g,firstV:v,bestV:v});if(v>m[g.ex].bestV){m[g.ex].best=g;m[g.ex].bestV=v}});return m;
+}
+function analyze(){
+ const out=[],ww=weekly('w'),wa=weekly('wa'),P=D.profile;
+ const lastW=[...D.body].reverse().find(b=>b.w)?.w;
+ if(ww.length>=2){
+  const a=ww[ww.length-1],b=ww[ww.length-2],tot=a.v-ww[0].v,rate=(a.v-b.v)/(lastW||72)*100;
+  out.push(`⚖️ متوسط وزنك هالأسبوع <b>${f1(a.v)}</b> كجم (${sgn(a.v-b.v)} عن الأسبوع اللي قبله، ${sgn(tot)} من البداية).`);
+  if(rate<-1)out.push(`<span class="bad">⚠️ تنزل أسرع من 1% بالأسبوع — ممكن تخسر عضل. زد 150–200 سعرة.</span>`);
+  else if(rate<=-0.2)out.push(`<span class="good">✅ نزول مثالي (${f1(Math.abs(rate))}% أسبوعيًا) — كمّل كذا.</span>`);
+  else if(rate<=0.25)out.push(`➖ الوزن ثابت تقريبًا — طبيعي في إعادة التشكيل إذا الخصر ينزل والأوزان تزيد.`);
+  else out.push(`<span class="bad">📈 الوزن يزيد. إذا الخصر يزيد بعد، نقّص 150–200 سعرة أو زد المشي.</span>`);
+ } else out.push('⚖️ سجّل وزنك صباحًا 3–4 أيام بالأسبوع وبعد أسبوعين يبدأ التحليل.');
+ if(wa.length>=2){const d=wa[wa.length-1].v-wa[0].v;out.push(d<0?`<span class="good">📏 خصرك نزل ${f1(-d)} سم من البداية — دهون البطن تنقص 👏</span>`:`📏 الخصر ${sgn(d)} سم من البداية.`)}
+ else out.push('📏 قِس خصرك مرة بالأسبوع (فوق السرة، صباحًا) — أهم مؤشر لنزول الدهون.');
+ const m=bestByEx(),ex=Object.keys(m);
+ if(ex.length){
+  const up=ex.filter(e=>m[e].bestV>m[e].firstV*1.02);
+  out.push(`🏋️ قوتك زادت في <b>${up.length}</b> من ${ex.length} تمارين.`+(up.length?' أبرزها: '+up.sort((a,b)=>m[b].bestV/m[b].firstV-m[a].bestV/m[a].firstV).slice(0,2).map(e=>`${e} (+${Math.round((m[e].bestV/m[e].firstV-1)*100)}%)`).join('، '):''));
+  const stale=ex.filter(e=>days(m[e].best.d,today())>=21);
+  if(stale.length)out.push(`⏸️ ما تحسنت من 3 أسابيع في: ${stale.join('، ')} — جرّب تغيّر التكرارات أو تنام أكثر.`);
+  const wk=new Set(D.gym.filter(g=>days(g.d,today())<7).map(g=>g.d)).size;
+  out.push(`📅 تمرنت ${wk} أيام آخر 7 أيام (الهدف 4).`);
+ } else out.push('🏋️ سجّل أوزانك في النادي عشان أتابع قوتك.');
+ if(ww.length>=3&&wa.length>=2&&Math.abs(ww.at(-1).v-ww[0].v)<0.6&&wa.at(-1).v<wa[0].v)out.push('<span class="good">🔥 وزنك ثابت وخصرك ينزل = تبني عضل وتحرق دهون. هذا هو الهدف!</span>');
+ return out;
+}
+function kcal(){
+ const P=D.profile,w=[...D.body].reverse().find(b=>b.w)?.w||72;
+ if(!P.age)return {kc:2250,note:'تقريبي — أدخل عمرك لحساب أدق'};
+ const bmr=10*w+6.25*P.h-5*P.age+5;return {kc:Math.round(bmr*P.act/50)*50-300,note:'محسوب من بياناتك (عجز بسيط ~300)'};
+}
+function render(){
+ const P=D.profile,wk=Math.min(12,Math.max(1,Math.floor(days(P.start,today())/7)+1));
+ $('weekLbl').textContent=`الأسبوع ${wk} من 12`;
+ const lastW=[...D.body].reverse().find(b=>b.w)?.w,lastWa=[...D.body].reverse().find(b=>b.wa)?.wa,firstW=D.body.find(b=>b.w)?.w;
+ const bmi=lastW?lastW/((P.h/100)**2):null,{kc,note}=kcal(),prot=Math.round((lastW||72)*2);
+ $('kpis').innerHTML=[[f1(lastW),'الوزن الحالي (كجم)'],[lastW&&firstW?sgn(lastW-firstW):'—','التغير من البداية'],[f1(lastWa),'الخصر (سم)'],[f1(bmi),'مؤشر كتلة الجسم'],[kc,'سعراتك اليومية'],[prot+' غ','البروتين اليومي']].map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+ $('insights').innerHTML=analyze().map(x=>`<div class="ins">${x}</div>`).join('');
+ chart('chW',weekly('w'));chart('chWa',weekly('wa'));
+ $('bList').innerHTML=D.body.map((b,i)=>[b,i]).reverse().map(([b,i])=>`<tr><td>${b.d.slice(5)}</td><td>${f1(b.w)}</td><td>${f1(b.wa)}</td><td>${f1(b.ch)}</td><td>${f1(b.ar)}</td><td><button class="del" onclick="del('body',${i})">✕</button></td></tr>`).join('');
+ const m=bestByEx();
+ $('prList').innerHTML=Object.keys(m).map(e=>{const x=m[e],p=Math.round((x.bestV/x.firstV-1)*100);return `<tr><td>${e}</td><td>${x.first.kg}×${x.first.r}</td><td>${x.best.kg}×${x.best.r}</td><td class="${p>0?'good':''}">${p>0?'+':''}${p}%</td></tr>`}).join('')||'<tr><td class="sub">لا يوجد بعد</td></tr>';
+ $('gList').innerHTML=D.gym.map((g,i)=>[g,i]).reverse().slice(0,15).map(([g,i])=>`<tr><td>${g.d.slice(5)}</td><td>${g.ex}</td><td>${g.kg} كجم × ${g.r} × ${g.s}</td><td><button class="del" onclick="del('gym',${i})">✕</button></td></tr>`).join('');
+ const fat=Math.round(kc*.27/9),carb=Math.round((kc-prot*4-fat*9)/4);
+ $('macros').innerHTML=[[kc,'سعرة'],[prot+' غ','بروتين'],[carb+' غ','كربوهيدرات'],[fat+' غ','دهون']].map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('')+`<p class="sub" style="grid-column:1/-1">${note}</p>`;
+ $('pH').value=P.h;$('pAge').value=P.age;$('pAct').value=P.act;$('pStart').value=P.start;
+ hint();
+}
+function exportData(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='body-tracker-'+today()+'.json';a.click()}
+function importData(inp){const r=new FileReader();r.onload=()=>{try{D=JSON.parse(r.result);save();render();alert('تم')}catch(e){alert('ملف غير صالح')}};r.readAsText(inp.files[0])}
+
+$('gDay').innerHTML=Object.keys(PLAN).map(k=>`<option>${k}</option>`).join('');
+$('planList').innerHTML=Object.entries(PLAN).map(([d,l])=>`<details><summary>${d}</summary><ul>${l.map(([n,s])=>`<li>${n} — ${s}</li>`).join('')}</ul></details>`).join('');
+$('bDate').value=$('gDate').value=today();
+fillEx();render();
+</script>
+</body>
+</html>
