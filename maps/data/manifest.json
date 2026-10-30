@@ -1,0 +1,12 @@
+{
+  "version": "20261029",
+  "osmTimestamp": "2026-10-29T00:22:51Z",
+  "source": "OpenStreetMap contributors (ODbL), extract by download.openstreetmap.fr",
+  "files": {
+    "oman-roads.bin.gz": 6231895,
+    "oman-places.json": 1465555,
+    "oman-cameras.json": 36672,
+    "oman-admin.json": 280675,
+    "oman-boundary.json": 13915
+  }
+}
