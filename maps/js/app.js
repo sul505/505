@@ -217,7 +217,8 @@ async function boot() {
     if (h) { map.flyTo({ center: [h.lon, h.lat], zoom: h.zoom }); openPlace({ lat: h.lat, lon: h.lon, name: h.name }); }
   });
   const st = await region.status().catch(() => null);
-  if (st && st.basemap?.status !== 'complete' && !fromHash) openPanel('welcome', st);
+  if (S.ios && !S.standalone && !fromHash) openPanel('install');
+  else if (st && st.basemap?.status !== 'complete' && !fromHash) openPanel('welcome', st);
 }
 
 function parseHash() {
@@ -298,6 +299,22 @@ function openDrawer() { $('#drawer').hidden = false; $('#scrim').hidden = false;
 function closeDrawer() { $('#drawer').hidden = true; $('#scrim').hidden = true; }
 
 /* ---------- welcome ---------- */
+// iPhone/iPad: the app must be added to the home screen (from Safari) before downloading,
+// because the installed app keeps its own storage, separate from Safari's.
+S.ios = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+S.standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const SHARE_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-4px"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M7 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-1"/></svg>';
+PANELS.install = () => `
+  ${head('ثبّت التطبيق على الآيفون', { noBack: true })}
+  <p class="sub">حتى يعمل بدون إنترنت ويظهر كأيقونة مثل باقي التطبيقات:</p>
+  <ol class="install-steps">
+    <li>اضغط زر <b>المشاركة</b> ${SHARE_ICON} في Safari (أسفل الشاشة، أو من زر <b>•••</b> ثم «مشاركة»).</li>
+    <li>اختر <b>«إضافة إلى الشاشة الرئيسية»</b> ثم <b>«إضافة»</b>.</li>
+    <li>افتح التطبيق <b>من الأيقونة الجديدة</b>، ثم نزّل الخرائط من القائمة ☰.</li>
+  </ol>
+  <div class="warn-box">إذا فتحت الرابط من داخل تطبيق آخر (مثل Claude أو واتساب) ولم تجد «إضافة إلى الشاشة الرئيسية»، افتحه أولاً في Safari.</div>
+  <div class="actions"><button class="btn ghost" data-act="close">أكمل في المتصفح الآن</button></div>`;
+
 PANELS.welcome = st => `
   ${head('أهلاً بك في خرائط عُمان', { noBack: true })}
   <p class="sub">لتعمل الخريطة والبحث والملاحة <b>بدون إنترنت</b>، نزّل بيانات عُمان مرة واحدة (حوالي ${fmtNum(region.ARCHIVES.basemap.approxMB + region.ARCHIVES.terrain.approxMB[S.settings.terrainZoom])} ميغابايت مع التضاريس).</p>
@@ -918,6 +935,10 @@ async function refreshOffline() {
 async function startDownload(update = false) {
   if (S.download) return;
   if (!navigator.onLine) { toast('التنزيل يحتاج اتصالاً بالإنترنت'); return; }
+  if (S.ios && !S.standalone && !confirm('على الآيفون: ثبّت التطبيق على الشاشة الرئيسية أولاً ثم نزّل الخرائط من داخله، لأن ما تنزّله هنا في Safari لن يظهر داخل التطبيق المثبّت.\n\nهل تريد التنزيل هنا في Safari رغم ذلك؟')) {
+    openPanel('install');
+    return;
+  }
   const ctrl = new AbortController();
   S.download = { ctrl, pct: 0, parts: {} };
   region.requestPersist();
@@ -972,7 +993,8 @@ function wireUI() {
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; });
   S.install = async () => {
     if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; return; }
-    toast(/iphone|ipad/i.test(navigator.userAgent) ? 'في Safari: زر المشاركة ← «إضافة إلى الشاشة الرئيسية»' : 'من قائمة المتصفح اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»', 6000);
+    if (S.ios) { openPanel('install'); return; }
+    toast('من قائمة المتصفح اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»', 6000);
   };
 }
 
