@@ -20,8 +20,14 @@ function basemap(flavor, lang) {
  * opts: { flavor: 'light'|'dark', lang: 'ar'|'en', show: {hillshade, contours, offroad, satellite, cameras, tides, peaks},
  *         contourTiles: url, data: {sourceId: GeoJSON} }
  */
+// Live archives, used directly (pmtiles:// protocol) when no service worker can serve tiles.
+export const REMOTE = {
+  basemap: 'https://data.source.coop/protomaps/openstreetmap/v4.pmtiles',
+  terrain: 'https://download.mapterhorn.com/planet.pmtiles',
+};
+
 export function buildStyle(opts) {
-  const { flavor = 'light', lang = 'ar', show = {}, contourTiles, data = {}, terrain: dem = {} } = opts;
+  const { flavor = 'light', lang = 'ar', show = {}, contourTiles, data = {}, terrain: dem = {}, direct = false } = opts;
   // dem: { maxzoom, bounds } of the terrain that can actually be served (offline: the downloaded archive)
   const demExtra = { maxzoom: dem.maxzoom ?? 12, ...(dem.bounds ? { bounds: dem.bounds } : {}) };
   const hasDem = dem.available !== false;
@@ -33,6 +39,11 @@ export function buildStyle(opts) {
     terrain3d: { type: 'raster-dem', tiles: [`${BASE}tiles/terrain/{z}/{x}/{y}.webp`], tileSize: 512, minzoom: 0, encoding: 'terrarium', ...demExtra },
     satellite: { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri' },
   };
+  if (direct) {
+    sources.protomaps = { type: 'vector', url: `pmtiles://${REMOTE.basemap}`, attribution: ATTR_OSM };
+    sources.terrain = { type: 'raster-dem', url: `pmtiles://${REMOTE.terrain}`, tileSize: 512, encoding: 'terrarium', attribution: ATTR_DEM };
+    sources.terrain3d = { type: 'raster-dem', url: `pmtiles://${REMOTE.terrain}`, tileSize: 512, encoding: 'terrarium' };
+  }
   if (contourTiles && hasDem) sources.contours = { type: 'vector', tiles: [contourTiles], maxzoom: 15, ...(dem.bounds ? { bounds: dem.bounds } : {}) };
   for (const id of OVERLAY_SOURCES) sources[id] = { type: 'geojson', data: data[id] || empty() };
 

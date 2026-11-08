@@ -1,5 +1,5 @@
 // Elevation from the terrain tiles (Terrarium-encoded WebP, served by the service worker).
-import { BASE } from './style.js';
+import { BASE, REMOTE } from './style.js';
 import { pointAlong } from './geo.js';
 
 const RAD = Math.PI / 180;
@@ -13,13 +13,25 @@ function decodeCanvas(w, h) {
   return c;
 }
 
+let remote = null;
+async function tileBlob(z, x, y) {
+  // without a service worker (preview, unsupported browser) read the live archive directly
+  if (!navigator.serviceWorker?.controller && self.pmtiles) {
+    remote ||= new self.pmtiles.PMTiles(REMOTE.terrain);
+    const t = await remote.getZxy(z, x, y);
+    return t?.data?.byteLength ? new Blob([t.data], { type: 'image/webp' }) : null;
+  }
+  const res = await fetch(`${BASE}tiles/terrain/${z}/${x}/${y}.webp`);
+  return res.status === 200 ? res.blob() : null;
+}
+
 function tile(z, x, y) {
   const key = `${z}/${x}/${y}`;
   if (cache.has(key)) { const v = cache.get(key); cache.delete(key); cache.set(key, v); return v; }
   const p = (async () => {
-    const res = await fetch(`${BASE}tiles/terrain/${z}/${x}/${y}.webp`);
-    if (res.status !== 200) return null;
-    const bmp = await createImageBitmap(await res.blob());
+    const blob = await tileBlob(z, x, y);
+    if (!blob) return null;
+    const bmp = await createImageBitmap(blob);
     const canvas = decodeCanvas(bmp.width, bmp.height);
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bmp, 0, 0);

@@ -3,7 +3,7 @@
  *   data/*                               -> cache first (filled by the offline download)
  *   everything else                      -> app shell cache first, network fallback
  */
-const BUILD = 'e8f400d89602'; // replaced by tools/build-precache.mjs
+const BUILD = '08ed25d14714'; // replaced by tools/build-precache.mjs
 const SHELL = `shell-${BUILD}`;
 const DATA = 'data-v1';
 importScripts('vendor/pmtiles.js', 'js/db-core.js');

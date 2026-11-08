@@ -125,9 +125,19 @@ function terrainScope() {
 }
 let map;
 const styleNow = () => {
+  // without a service worker, tiles stream straight from the live archives (online only, no contours)
+  if (S.direct) return buildStyle({ flavor: flavor(), lang: S.settings.lang, show: S.settings.show, data: S.overlay, direct: true });
   const dem = terrainScope();
   return buildStyle({ flavor: flavor(), lang: S.settings.lang, show: S.settings.show, contourTiles: contourTilesFor(dem.maxzoom ?? 12), data: S.overlay, terrain: dem });
 };
+async function enableDirectTiles() {
+  await new Promise((resolve, reject) => {
+    const s = Object.assign(document.createElement('script'), { src: 'vendor/pmtiles.js', onload: resolve, onerror: reject });
+    document.head.appendChild(s);
+  });
+  maplibregl.addProtocol('pmtiles', new self.pmtiles.Protocol().tile);
+  S.direct = true;
+}
 async function loadTerrainScope() {
   const rec = await DB.get('archives', 'terrain').catch(() => null);
   S.terrainLocal = rec?.status === 'complete' ? { maxZoom: rec.header?.maxZoom ?? rec.params?.maxZoom ?? 12, bounds: rec.header?.bounds } : null;
@@ -169,7 +179,10 @@ async function boot() {
   applyTheme();
   const controlled = await swReady();
   await loadTerrainScope();
-  if (!controlled) toast('المتصفح لا يدعم العمل بدون إنترنت هنا — افتح التطبيق عبر https', 6000);
+  if (!controlled) {
+    try { await enableDirectTiles(); } catch { /* the map will stay empty */ }
+    toast('هذه النسخة تعمل مع الإنترنت فقط — للعمل بدون نت افتح التطبيق من رابطه الأساسي وثبّته', 6000);
+  }
   let view = null;
   try { view = JSON.parse(localStorage.getItem('omanmaps.view')); } catch { /* private mode */ }
   const fromHash = parseHash();
@@ -887,6 +900,7 @@ async function refreshOffline() {
   const allReady = st.basemap?.status === 'complete' && st.terrain?.status === 'complete' && st.data.cached === st.data.total;
   const used = st.storage ? `${mb(st.storage.usage)} من ${mb(st.storage.quota)}` : 'غير معروف';
   el.innerHTML = `
+    ${S.direct ? '<div class="warn-box">هذه النسخة مفتوحة بدون خدمة العمل دون اتصال (معاينة أو متصفح لا يدعمها)، لذلك لن تُستخدم الخرائط المنزّلة هنا. افتح التطبيق من رابطه الأساسي على https وثبّته على الشاشة الرئيسية.</div>' : ''}
     <p class="sub">نزّل خريطة عُمان كاملة على جهازك لتعمل الخريطة والبحث والملاحة والتضاريس والمد والجزر بدون إنترنت.</p>
     <div class="card"><div class="row"><b class="grow">البيانات (بحث، طرق للملاحة، كاميرات، مد وجزر)</b>${st.data.cached === st.data.total ? `<span class="chip ok">${icon('check', 14)} جاهز</span>` : `<span class="chip">${fmtNum(st.data.cached)}/${fmtNum(st.data.total)}</span>`}</div>
       <div class="muted small">حوالي ٩ م.ب</div>${S.download?.parts?.data ? `<div class="progress"><i style="width:${Math.round(S.download.parts.data.pct * 100)}%"></i></div>` : ''}</div>
